@@ -1,0 +1,25 @@
+# LUMEN OMEGA SYSTEM CONFIGURATION
+# Version: 1.0
+# "The DNA of the Wolfpack"
+
+system:
+  mode: "DEV_MODE_EXECUTE_ALL_TASKS"
+  version: "18.5.0"
+  primary_llm: "dolphin-llama3:latest"
+  secondary_llm: "gemini-2.0-flash"
+  
+sync:
+  enabled: true
+  protocol: "redis"
+  nexus_registry: "LUMEN_NEXUS/registry.yaml"
+
+backup:
+  target: "gcloud"
+  gcs_bucket: "lumen-omega-backups" # Placeholder
+  archive_path: "LUMEN_VAULT/04_ARCHIVES/"
+
+tool_factory:
+  enabled: true
+  capability: "hardened_v2.1"
+  
+# User specific overrides can be placed in lumen.local.yaml
