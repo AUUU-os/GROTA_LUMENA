@@ -1,0 +1,19 @@
+﻿# 🛡️ LUMEN GROTA - GIT IGNORE
+# Protect the Pentagon/Grotto from leaking secrets
+
+# Keys and Environment
+KEYS/
+.env
+.env.*
+*.backup
+
+# Databases (Production data stays local/GDrive)
+DATABASE/*.db
+DATABASE/*.json
+!DATABASE/memory.json # Unless we want to sync memory? Usually yes.
+
+# System/IDE
+.vscode/
+__pycache__/
+*.log
+pulse.py
