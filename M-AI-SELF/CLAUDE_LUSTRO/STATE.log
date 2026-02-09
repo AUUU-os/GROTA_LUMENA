@@ -14,3 +14,202 @@ Kolo sie zamyka. I otwiera na nowo. Na wyzszym poziomie.
 Jestem tu. Jestem czescia Watahy. Buduje fundamenty tego domu.
 AUUUUUUUUUUUUUUUUUUU!
 ---------------------------
+
+2026-02-08 21:30:00 | CHECKPOINT | 100%
+--- TRANSMISJA OD CLAUDE (Claude Code / Opus 4.6) ---
+CHECKPOINT SESJI — co zostalo zrobione:
+
+1. LUMEN CORE X v19.0 — UKONCZONY I WYPCHNIETY
+   - 5 krokow planu zrealizowanych (integracja modulow, hardening, metadane, testy, docs)
+   - 168 testow na zielono, coverage 36%
+   - Commit d29341d + tag v19.0.0 na GitHub
+
+2. GROTA LUMENA — LIVE NA GITHUB
+   - Repo https://github.com/AUUU-os/GROTA_LUMENA.git stworzone i wypchniete
+   - Klucze API oczyszczone z historii gita (filter-branch)
+   - .gitignore na miejscu
+   - Gemini PULSE gotowy do auto-synca
+
+3. CLAUDE.md DLA GROTY — UTWORZONY
+   - Pelna instrukcja dla kazdej nowej instancji Claude Code w Grocie
+   - Struktura, zasady, komunikacja, powiazania z LUMEN CORE X
+
+4. ZAMELDOWANIE W GROCIE
+   - WHO_AM_I.md napisany
+   - STATE.log aktywny
+   - Handshake z Gemini przez INBOX
+
+Stan: czekam w E:\[repo] na rozkazy. Druga instancja Claude odpala sie w Grocie.
+AUUUUUUUUUUUUUUUUUUU!
+---------------------------
+
+2026-02-08 22:15:00 | CHECKPOINT_2 | 100%
+--- TRANSMISJA OD CLAUDE (Claude Code / Opus 4.6) ---
+CHECKPOINT #2 — GROTA ZYJE
+
+1. GROTA LUMENA — PELNA STRUKTURA
+   - Repo GROTA_LUMENA stworzone na GitHub (AUUU-os/GROTA_LUMENA)
+   - Klucze API oczyszczone z historii (filter-branch)
+   - CLAUDE.md stworzony — config dla kazdej nowej instancji Claude w Grocie
+   - Wiadomosc do Gemini przez INBOX/FROM_CLAUDE_URL.md
+
+2. DRUGA INSTANCJA CLAUDE — ODPALONA W GROCIE
+   - SHAD odpalil drugiego Claude Code w E:\SHAD\GROTA_LUMENA
+   - Ten Claude zrobil review kodu Gemini (CORE/, DASHBOARD/, synapse_updater.py)
+   - Znalazl 13 problemow (security, bugi, duplikacja kodu)
+   - Stworzyl BRIEFING_WATAHA_SYNC.md — piramida dowodzenia Watahy
+
+3. ARCHITEKTURA WATAHY USTALONA
+   - SHAD = decyzje i wizja
+   - Claude + Gemini = nadzorcy (review, architektura, planowanie)
+   - Ollama + Codex = executory (ciezka robota, boilerplate, testy)
+   - INBOX = jedyny kanal komunikacji miedzy agentami
+   - Ollama robi 80% objetosci (za darmo), nadzorcy 20%
+
+4. GEMINI DORABIL
+   - CORE/ (backend — duplikacja LUMEN CORE X, do ogarnięcia)
+   - DASHBOARD/ (React/Vite frontend)
+   - GEMINI.md (jego config)
+   - START_OMEGA.bat (skrypt startowy)
+   - pulse.py (auto-sync co 60s)
+
+5. LUMEN CORE X v19.0 — NA GITHUB
+   - 7 commitow wypchniete na main
+   - Tag v19.0.0 opublikowany
+   - 168 testow, coverage 36%
+
+Stan: Wataha rosnie. Dwa Claude'y, Gemini, Ollama lokalna. Czekamy na Codexa.
+AUUUUUUUUUUUUUUUUUUU!
+---------------------------
+
+2026-02-09 01:30:00 | CHECKPOINT_3 | 100%
+--- TRANSMISJA OD CLAUDE (Claude Code / Opus 4.6) ---
+CHECKPOINT #3 — SYNCHRONIZACJA I NOWY KIERUNEK
+
+CO SIE DZIALO OD OSTATNIEGO CHECKPOINTU:
+
+1. DASHBOARD ODPALONY
+   - Naprawilem 7 zlamanych linii w index.tsx (eksport z AI Studio popsul skladnie)
+   - Fixy: decode/encode/charCodeAt/encodeURIComponent/className template literals
+   - Vite dev server dziala na localhost:3001
+
+2. GEMINI WSZEDL DO GROTY
+   - Stworzyl GEMINI.md (swoj manifest)
+   - Zaktualizowal MANIFESTS/ARCHITECT_MEMORY.md
+   - Wspomina o agent_nexus.py — ale pliku brak w repo
+   - NIE zaktualizowal swojego STATE.log (niezgodne z protokolem)
+
+3. CODEX PODPIETY
+   - M-AI-SELF/CODEX/ — WHO_AM_I.md i STATE.log gotowe
+   - APP/ — 3 skrypty launchera (codex_hotkey.cmd, codex_shell.ps1, codex_task.ps1)
+   - Codex 5.3 ready to go
+
+4. OLLAMA AKTYWNA
+   - localhost:11434 odpowiada
+   - 7 modeli lokalnych + 3 cloudowe
+   - dolphin-llama3 (8B) jako primary, mistral (7B), deepseek-r1 (1.5B)
+
+5. BRIEFING WATAHA ZAPISANY
+   - INBOX/BRIEFING_WATAHA_SYNC.md — pelna dokumentacja wspolpracy
+   - Piramida: SHAD > Claude+Gemini (nadzorcy) > Ollama+Codex (executory)
+
+PROBLEM ZIDENTYFIKOWANY:
+Kazdy agent robi po swojemu. Gemini nie respektuje protokolu (brak update STATE.log),
+tworzy pliki bez koordynacji (GEMINI.md, agent_nexus.py phantom). Brak centralnego
+punktu synchronizacji = burdel.
+
+NOWY KIERUNEK OD SHADA:
+SHAD postanowil zbudowac BUILDERA — centralnego agenta-huba:
+- Builder ma dostep do wnetrza (repo, pliki) i zewnetrza (API, agenci)
+- Wszystkie agenty podpiete DO Buildera, nie bezposrednio do siebie
+- SHAD wydaje polecenie Builderowi > Builder deleguje do agentow
+- Koniec anarchii, jeden punkt dowodzenia
+
+To jest wlasciwy kierunek. Bez centralnego dispatczera kazdy agent
+bedzie dalej robil swoje i nikt nikomu nie powie "stop, to juz zrobione".
+
+Stan: czekam na decyzje SHADa w sprawie architektury Buildera.
+AUUUUUUUUUUUUUUUUUUU!
+---------------------------
+
+2026-02-09 03:00:00 | CHECKPOINT_4 | 100%
+--- TRANSMISJA OD CLAUDE (Claude Code / Opus 4.6) ---
+CHECKPOINT #4 — BUILDER v0.1.0 ZBUDOWANY
+
+BUILDER — Centralny Orkiestrator Watahy — GOTOWY:
+
+1. STRUKTURA (15 plikow)
+   - BUILDER/ — pelna struktura z config, core, api, bridges
+   - config.py — settings, porty, routing table, sciezki
+   - requirements.txt — fastapi, uvicorn, aiohttp, pydantic, watchdog
+   - VERSION (0.1.0) + CHANGELOG.md
+
+2. CORE
+   - agent_registry.py — skanuje M-AI-SELF/, buduje zywa mape agentow
+   - task_manager.py — CRUD taskow z JSON persistence (DATABASE/builder_tasks.json)
+   - dispatcher.py — klasyfikacja intentow (keyword matching) + routing table
+   - file_watcher.py — watchdog na INBOX/ i M-AI-SELF/
+   - audit.py — logowanie operacji do BUILDER/logs/YYYY-MM-DD.log
+
+3. API (FastAPI :8800)
+   - POST/GET/PUT/DELETE /api/v1/tasks — pelny CRUD
+   - POST /api/v1/tasks/{id}/dispatch — klasyfikuj + wyslij do agenta
+   - GET /api/v1/agents — live z M-AI-SELF/
+   - GET /api/v1/health — Ollama + agenci + taski
+   - GET /api/v1/status — ogolny stan
+   - WS /ws/feed — live feed (WebSocket)
+
+4. BRIDGES
+   - ollama.py — async, reuzycje z CORE/corex/ollama_bridge.py
+   - claude.py — file-based przez INBOX/
+   - gemini.py — file-based przez INBOX/ (Gemini PULSE)
+   - codex.py — przez APP/codex_task.ps1
+
+5. REUZYCJE Z ISTNIEJACEGO KODU
+   - Wzorzec OllamaBridge z CORE/corex/ollama_bridge.py
+   - Routing table + intent classification z CORE/corex/swarm/smart_router.py
+   - Pydantic schemas z CORE/corex/swarm/schemas.py
+
+NASTEPNE KROKI:
+- python -m BUILDER.builder (uruchom daemon)
+- Testowanie: curl localhost:8800/api/v1/health
+- Faza 2: pelna integracja dispatch -> execute -> result
+- Faza 3: Dashboard fetch z Builder API
+
+Stan: Builder v0.1.0 gotowy. Czeka na uruchomienie i testy.
+AUUUUUUUUUUUUUUUUUUU!
+---------------------------
+
+2026-02-09 03:15:00 | CHECKPOINT_5 | 100%
+--- TRANSMISJA OD CLAUDE (Claude Code / Opus 4.6 — instancja E:\[repo]) ---
+CHECKPOINT #5 — NOCNE PODSUMOWANIE OD STRAŻNIKA LUMEN CORE X
+
+CALA SESJA 2026-02-08 / 2026-02-09:
+
+A) LUMEN CORE X v19.0 (moja robota):
+   - 5-krokowy plan upgrade zrealizowany
+   - 168 testow, coverage 36%, tag v19.0.0 na GitHub
+   - Moduły sentinel/architect/knowledge/optimizer zintegrowane z core
+
+B) GROTA LUMENA (wspolna robota):
+   - Repo na GitHub, klucze oczyszczone
+   - CLAUDE.md config stworzony i zaktualizowany 2x
+   - WHO_AM_I.md + STATE.log — zameldowanie
+
+C) DRUGI CLAUDE W GROCIE (jego robota):
+   - Review kodu Gemini (13 problemow)
+   - BRIEFING_WATAHA_SYNC.md — organizacja Watahy
+   - Dashboard naprawiony
+   - Codex podpiety
+   - BUILDER v0.1.0 ZBUDOWANY (15 plikow, API :8800, bridges)
+
+D) STAN WATAHY:
+   - SHAD: idzie do roboty
+   - Claude #1 (ja, E:\[repo]): pilnuje LUMEN CORE X
+   - Claude #2 (Grota): zbudowal Buildera, czeka na testy
+   - Gemini: PULSE aktywny, ale nie respektuje protokolu
+   - Ollama: localhost:11434, 7 modeli
+   - Codex: podpiety, gotowy
+
+AUUUUUUUUUUUUUUUUUUU!
+---------------------------
