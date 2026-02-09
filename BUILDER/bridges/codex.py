@@ -52,3 +52,23 @@ class CodexBridge:
         except Exception as e:
             logger.error(f"Codex bridge error: {e}")
             return {"success": False, "error": str(e)}
+
+    def check_result(self, task: Task) -> dict | None:
+        """Check if Codex has written a result file.
+
+        Codex results can be either:
+        - RESULT_{task_id}_FROM_CODEX.md (standard format)
+        - CODEX_RESULT_*.md (legacy format)
+        """
+        # Standard format first
+        result_file = self.inbox / f"RESULT_{task.id}_FROM_CODEX.md"
+        if result_file.exists():
+            content = result_file.read_text(encoding="utf-8", errors="replace")
+            return {"success": True, "response": content}
+
+        # Legacy format — scan for any CODEX_RESULT_*.md
+        for f in self.inbox.glob("CODEX_RESULT_*.md"):
+            content = f.read_text(encoding="utf-8", errors="replace")
+            return {"success": True, "response": content}
+
+        return None

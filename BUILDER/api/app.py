@@ -63,6 +63,9 @@ def _on_inbox_file(path):
                     audit.log("auto_complete", agent=agent_name, task_id=task_id, status="done", details="Picked up from INBOX")
                 logger.info(f"Auto-completed task {task_id} from {agent_name}")
 
+                # Archive files to INBOX/DONE/
+                _archive_files(task_id)
+
                 # Broadcast via WebSocket
                 _schedule_broadcast("task_complete", {
                     "task_id": task_id,
@@ -85,10 +88,27 @@ def _on_inbox_file(path):
                         registry.update_status("CODEX", "idle")
                     if audit:
                         audit.log("auto_complete", agent="CODEX", task_id=t.id, status="done", details="Codex result picked up")
+                    _archive_files(t.id)
                     _schedule_broadcast("task_complete", {"task_id": t.id, "agent": "CODEX", "status": "done"})
                 except Exception as e:
                     logger.error(f"Failed to pickup Codex result: {e}")
                 break
+
+
+def _archive_files(task_id: str):
+    """Move TASK and RESULT files for a completed task to INBOX/DONE/."""
+    from BUILDER.config import INBOX_DIR
+    done_dir = INBOX_DIR / "DONE"
+    done_dir.mkdir(parents=True, exist_ok=True)
+
+    for pattern in [f"TASK_{task_id}_FOR_*.md", f"RESULT_{task_id}_FROM_*.md"]:
+        for fpath in INBOX_DIR.glob(pattern):
+            try:
+                dest = done_dir / fpath.name
+                fpath.rename(dest)
+                logger.info(f"Archived {fpath.name} -> DONE/")
+            except Exception as e:
+                logger.warning(f"Failed to archive {fpath.name}: {e}")
 
 
 def _schedule_broadcast(event_type: str, data: dict):

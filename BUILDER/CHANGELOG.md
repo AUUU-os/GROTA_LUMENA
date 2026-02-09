@@ -4,6 +4,24 @@ All notable changes to Builder will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-02-09
+
+### Added
+- Result polling endpoint: POST /api/v1/tasks/{id}/poll — checks for async results from Claude/Gemini/Codex
+- Task retry endpoint: POST /api/v1/tasks/{id}/retry — re-dispatch failed/done tasks
+- Task cancel endpoint: POST /api/v1/tasks/{id}/cancel — cancel running/pending tasks
+- Manual dispatch override: POST /api/v1/tasks/{id}/dispatch accepts optional body with agent/bridge/model override
+- Codex bridge `check_result()` — supports both standard and legacy result file formats
+- File archiving: completed task files auto-moved to INBOX/DONE/
+- CLI commands: poll, retry, cancel, watch (live tail)
+- CLI flags: --agent, --bridge, --model for dispatch and run commands
+- DispatchRequest Pydantic model for typed dispatch overrides
+
+### Changed
+- dispatch_task endpoint accepts optional DispatchRequest body
+- _on_inbox_file archives files to INBOX/DONE/ after auto-complete
+- CLI main() uses flag extraction for --agent/--bridge/--model
+
 ## [0.2.0] - 2026-02-09
 
 ### Added

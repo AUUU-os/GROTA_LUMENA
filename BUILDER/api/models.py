@@ -47,6 +47,12 @@ class TaskResponse(BaseModel):
     task_type: Optional[str] = None
 
 
+class DispatchRequest(BaseModel):
+    agent: Optional[str] = None  # Force dispatch to specific agent
+    bridge: Optional[str] = None  # Force specific bridge (ollama, claude, codex, gemini)
+    model: Optional[str] = None  # Force specific Ollama model
+
+
 class AgentResponse(BaseModel):
     name: str
     role: str

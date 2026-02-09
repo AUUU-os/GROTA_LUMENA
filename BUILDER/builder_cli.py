@@ -6,11 +6,15 @@ Usage:
     python -m BUILDER.builder_cli health
     python -m BUILDER.builder_cli agents
     python -m BUILDER.builder_cli agent CLAUDE_LUSTRO
-    python -m BUILDER.builder_cli tasks
+    python -m BUILDER.builder_cli tasks [status]
     python -m BUILDER.builder_cli task <id>
     python -m BUILDER.builder_cli new "Title" "Description" [priority]
-    python -m BUILDER.builder_cli dispatch <id>
-    python -m BUILDER.builder_cli run "Title" "Description" [priority]   # new + dispatch in one
+    python -m BUILDER.builder_cli dispatch <id> [--agent AGENT] [--bridge BRIDGE] [--model MODEL]
+    python -m BUILDER.builder_cli run "Title" "Description" [priority] [--agent AGENT]
+    python -m BUILDER.builder_cli poll <id>                              # check async result
+    python -m BUILDER.builder_cli retry <id>                             # retry failed task
+    python -m BUILDER.builder_cli cancel <id>                            # cancel running task
+    python -m BUILDER.builder_cli watch [interval]                       # live tail of task changes
     python -m BUILDER.builder_cli logs [limit]
     python -m BUILDER.builder_cli routing
 """
@@ -20,6 +24,7 @@ import json
 import urllib.request
 import urllib.error
 from pathlib import Path
+from datetime import datetime
 
 BASE = "http://localhost:8800/api/v1"
 
@@ -150,14 +155,23 @@ def cmd_new(title, description, priority="medium"):
     return data["id"]
 
 
-def cmd_dispatch(task_id):
+def cmd_dispatch(task_id, agent=None, bridge=None, model=None):
     print(f"Dispatching {task_id}...")
-    data = _post(f"/tasks/{task_id}/dispatch")
+    body = {}
+    if agent:
+        body["agent"] = agent
+    if bridge:
+        body["bridge"] = bridge
+    if model:
+        body["model"] = model
+    data = _post(f"/tasks/{task_id}/dispatch", body if body else None)
     r = data["routing"]
     t = data["task"]
     print(f"  Type:   {r['task_type']}")
     print(f"  Agent:  {r['agent']}")
     print(f"  Bridge: {r['bridge']}")
+    if r.get("model"):
+        print(f"  Model:  {r['model']}")
     print(f"  Status: {t['status']}")
     if t.get("result"):
         print(f"\n--- RESULT ---")
@@ -166,11 +180,75 @@ def cmd_dispatch(task_id):
         print(f"  (async — wynik pojawi sie w INBOX/)")
 
 
-def cmd_run(title, description, priority="medium"):
+def cmd_run(title, description, priority="medium", agent=None):
     """Create + dispatch in one step."""
     task_id = cmd_new(title, description, priority)
     print()
-    cmd_dispatch(task_id)
+    cmd_dispatch(task_id, agent=agent)
+
+
+def cmd_poll(task_id):
+    """Poll for async task result."""
+    data = _post(f"/tasks/{task_id}/poll")
+    status = data.get("status", "unknown")
+    print(f"  Status: {status}")
+    if status == "done":
+        print(f"\n--- RESULT ---")
+        print(data.get("result", ""))
+    elif status == "waiting":
+        print(f"  Wynik jeszcze niedostepny. Sprobuj ponownie za chwile.")
+    else:
+        print(f"  {data.get('message', '')}")
+
+
+def cmd_retry(task_id):
+    """Retry a failed task."""
+    print(f"Retrying {task_id}...")
+    data = _post(f"/tasks/{task_id}/retry")
+    r = data.get("routing", {})
+    t = data.get("task", {})
+    print(f"  Agent:  {r.get('agent', 'N/A')}")
+    print(f"  Bridge: {r.get('bridge', 'N/A')}")
+    print(f"  Status: {t.get('status', 'N/A')}")
+    if t.get("result"):
+        print(f"\n--- RESULT ---")
+        print(t["result"])
+
+
+def cmd_cancel(task_id):
+    """Cancel a running task."""
+    print(f"Cancelling {task_id}...")
+    data = _post(f"/tasks/{task_id}/cancel")
+    if data.get("cancelled"):
+        print(f"  Task cancelled.")
+    else:
+        print(f"  Failed to cancel: {data}")
+
+
+def cmd_watch(interval=5):
+    """Live tail of task status changes."""
+    import time
+    seen = {}
+    print(f"Watching tasks (co {interval}s, Ctrl+C aby przerwac)...")
+    print("-" * 70)
+    try:
+        while True:
+            data = _get("/tasks")
+            for t in data:
+                tid = t["id"]
+                status = t["status"]
+                key = f"{tid}:{status}"
+                if key not in seen:
+                    seen[key] = True
+                    agent = t.get("assigned_to") or "-"
+                    ts = datetime.now().strftime("%H:%M:%S")
+                    print(f"[{ts}] {tid} | {status:<10} | {agent:<18} | {t['title'][:40]}")
+                    if status == "done" and t.get("result"):
+                        preview = t["result"][:100].replace("\n", " ")
+                        print(f"         -> {preview}...")
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("\nWatch zakonczony.")
 
 
 def cmd_logs(limit=30):
@@ -188,6 +266,21 @@ def cmd_routing():
         print(f"{name:<16} {r['agent']:<22} {r['bridge']:<10} {model}")
 
 
+def _extract_flag(args, flag):
+    """Extract --flag VALUE from args list, returns (value, remaining_args)."""
+    result = None
+    remaining = []
+    i = 0
+    while i < len(args):
+        if args[i] == flag and i + 1 < len(args):
+            result = args[i + 1]
+            i += 2
+        else:
+            remaining.append(args[i])
+            i += 1
+    return result, remaining
+
+
 def main():
     args = sys.argv[1:]
     if not args:
@@ -195,6 +288,7 @@ def main():
         return
 
     cmd = args[0].lower()
+    rest = args[1:]
 
     if cmd == "status":
         cmd_status()
@@ -202,20 +296,33 @@ def main():
         cmd_health()
     elif cmd == "agents":
         cmd_agents()
-    elif cmd == "agent" and len(args) > 1:
-        cmd_agent(args[1])
+    elif cmd == "agent" and len(rest) > 0:
+        cmd_agent(rest[0])
     elif cmd == "tasks":
-        cmd_tasks(args[1] if len(args) > 1 else None)
-    elif cmd == "task" and len(args) > 1:
-        cmd_task(args[1])
-    elif cmd == "new" and len(args) >= 3:
-        cmd_new(args[1], args[2], args[3] if len(args) > 3 else "medium")
-    elif cmd == "dispatch" and len(args) > 1:
-        cmd_dispatch(args[1])
-    elif cmd == "run" and len(args) >= 3:
-        cmd_run(args[1], args[2], args[3] if len(args) > 3 else "medium")
+        cmd_tasks(rest[0] if rest else None)
+    elif cmd == "task" and len(rest) > 0:
+        cmd_task(rest[0])
+    elif cmd == "new" and len(rest) >= 2:
+        cmd_new(rest[0], rest[1], rest[2] if len(rest) > 2 else "medium")
+    elif cmd == "dispatch" and len(rest) > 0:
+        agent, rest2 = _extract_flag(rest, "--agent")
+        bridge, rest3 = _extract_flag(rest2, "--bridge")
+        model, rest4 = _extract_flag(rest3, "--model")
+        cmd_dispatch(rest4[0], agent=agent, bridge=bridge, model=model)
+    elif cmd == "run" and len(rest) >= 2:
+        agent, rest2 = _extract_flag(rest, "--agent")
+        priority = rest2[2] if len(rest2) > 2 else "medium"
+        cmd_run(rest2[0], rest2[1], priority, agent=agent)
+    elif cmd == "poll" and len(rest) > 0:
+        cmd_poll(rest[0])
+    elif cmd == "retry" and len(rest) > 0:
+        cmd_retry(rest[0])
+    elif cmd == "cancel" and len(rest) > 0:
+        cmd_cancel(rest[0])
+    elif cmd == "watch":
+        cmd_watch(int(rest[0]) if rest else 5)
     elif cmd == "logs":
-        cmd_logs(int(args[1]) if len(args) > 1 else 30)
+        cmd_logs(int(rest[0]) if rest else 30)
     elif cmd == "routing":
         cmd_routing()
     else:
