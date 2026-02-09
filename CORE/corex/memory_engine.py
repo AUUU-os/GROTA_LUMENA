@@ -6,6 +6,8 @@ Integrates SQL storage with ChromaDB vector search.
 
 import json
 import logging
+import os
+from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sqlmodel import select
@@ -22,6 +24,8 @@ class MemoryEngine:
     """
     def __init__(self):
         self.vector_db = vector_memory
+        self.backup_dir = Path("DATABASE/memory_backups")
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
 
     async def load(self):
         """Explicitly initialize resources (warm-up)."""
@@ -185,6 +189,52 @@ class MemoryEngine:
         if offset:
             hybrid_results = hybrid_results[offset:]
         return hybrid_results[:limit]
+
+    async def export_temporal(
+        self,
+        limit: int = 1000,
+        offset: int = 0,
+        agent_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        return await self.retrieve_memories(
+            query="",
+            limit=limit,
+            strategy="temporal",
+            offset=offset,
+            agent_id=agent_id,
+            session_id=session_id,
+        )
+
+    async def backup_to_file(
+        self,
+        limit: int = 1000,
+        offset: int = 0,
+        agent_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        keep_days: int = 7,
+    ) -> str:
+        """Create a JSON backup file and enforce retention."""
+        data = await self.export_temporal(limit, offset, agent_id, session_id)
+        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        filename = self.backup_dir / f"memory_backup_{ts}.json"
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        self.cleanup_backups(keep_days=keep_days)
+        return str(filename)
+
+    def cleanup_backups(self, keep_days: int = 7) -> int:
+        """Remove backups older than keep_days. Returns count removed."""
+        removed = 0
+        cutoff = datetime.utcnow().timestamp() - (keep_days * 86400)
+        for p in self.backup_dir.glob("memory_backup_*.json"):
+            try:
+                if p.stat().st_mtime < cutoff:
+                    p.unlink()
+                    removed += 1
+            except Exception:
+                continue
+        return removed
 
 # Singleton instance
 memory_engine = MemoryEngine()

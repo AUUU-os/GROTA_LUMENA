@@ -51,3 +51,13 @@
 - Updated: DASHBOARD/index.tsx (search pagination + tags)
 ## 2026-02-09 06:05:00
 - Updated: DASHBOARD/index.tsx (memory export download)
+## 2026-02-09 06:18:00
+- Updated: DASHBOARD/index.tsx (tag filter + agent/session labels)
+## 2026-02-09 06:30:00
+- Updated: DASHBOARD/index.tsx (agent colors + tag chips + export tag filter)
+- Updated: CORE/corex/api/routes/memory.py (export tag filter)
+- Updated: CORE/corex/api_server.py (export tag filter)
+## 2026-02-09 06:45:00
+- Updated: CORE/corex/api/routes/memory.py (export CSV + metrics)
+- Updated: CORE/corex/api_server.py (export CSV + metrics)
+- Updated: DASHBOARD/index.tsx (CSV export + metrics panel)

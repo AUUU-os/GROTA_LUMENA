@@ -14,6 +14,9 @@ DATABASE/*.json
 
 # System/IDE
 .vscode/
+.claude/
 __pycache__/
 *.log
 pulse.py
+nul
+node_modules/

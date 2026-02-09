@@ -1,0 +1,23 @@
+[
+  {
+    "ts": "2026-01-01",
+    "content": "SYSTEM: Oliwcia lubi dinozaury i kolor r\u00f3\u017cowy.",
+    "tags": [
+      "profil"
+    ]
+  },
+  {
+    "ts": "2026-01-01",
+    "content": "SYSTEM: Kot domowy nazywa si\u0119 Burek.",
+    "tags": [
+      "profil"
+    ]
+  },
+  {
+    "ts": "2026-01-01",
+    "content": "SYSTEM: Has\u0142o do tajnej bazy to 'Czekolada'.",
+    "tags": [
+      "secret"
+    ]
+  }
+]

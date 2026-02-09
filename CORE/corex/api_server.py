@@ -32,6 +32,9 @@ from corex.swarm.router import router as swarm_router
 from corex.omega import omega_shield, OmegaCommand
 from corex.monitor import resource_monitor
 from corex.health import health_checker
+from fastapi.responses import StreamingResponse
+import csv
+import io
 from corex.memory_engine import memory_engine
 
 # --- INITIALIZATION ---
@@ -348,8 +351,27 @@ async def memory_stats():
     return {"success": True, "stats": memory_engine.vector_db.get_stats()}
 
 
+@app.get("/api/v1/memory/metrics")
+async def memory_metrics():
+    results = await memory_engine.retrieve_memories(query="", limit=1000, strategy="temporal")
+    by_agent = {}
+    by_type = {}
+    by_tag = {}
+    for r in results:
+        agent = r.get("agent_id") or "unknown"
+        mtype = r.get("memory_type") or "unknown"
+        by_agent[agent] = by_agent.get(agent, 0) + 1
+        by_type[mtype] = by_type.get(mtype, 0) + 1
+        meta = r.get("meta_data") or {}
+        tags = meta.get("tags") or []
+        if isinstance(tags, list):
+            for t in tags:
+                by_tag[t] = by_tag.get(t, 0) + 1
+    return {"success": True, "by_agent": by_agent, "by_type": by_type, "by_tag": by_tag}
+
+
 @app.get("/api/v1/memory/export")
-async def memory_export(limit: int = 1000, offset: int = 0, agent_id: str = None, session_id: str = None):
+async def memory_export(limit: int = 1000, offset: int = 0, agent_id: str = None, session_id: str = None, tag: str = None):
     results = await memory_engine.retrieve_memories(
         query="",
         limit=limit,
@@ -358,7 +380,51 @@ async def memory_export(limit: int = 1000, offset: int = 0, agent_id: str = None
         agent_id=agent_id,
         session_id=session_id,
     )
+    if tag:
+        results = [
+            r for r in results
+            if isinstance(r.get("meta_data"), dict)
+            and isinstance(r["meta_data"].get("tags"), list)
+            and tag in r["meta_data"]["tags"]
+        ]
     return {"success": True, "results": results}
+
+
+@app.get("/api/v1/memory/export.csv")
+async def memory_export_csv(limit: int = 1000, offset: int = 0, agent_id: str = None, session_id: str = None, tag: str = None):
+    results = await memory_engine.retrieve_memories(
+        query="",
+        limit=limit,
+        strategy="temporal",
+        offset=offset,
+        agent_id=agent_id,
+        session_id=session_id,
+    )
+    if tag:
+        results = [
+            r for r in results
+            if isinstance(r.get("meta_data"), dict)
+            and isinstance(r["meta_data"].get("tags"), list)
+            and tag in r["meta_data"]["tags"]
+        ]
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["id", "created_at", "agent_id", "session_id", "memory_type", "content", "importance", "tags"])
+    for r in results:
+        meta = r.get("meta_data") or {}
+        tags = meta.get("tags", [])
+        writer.writerow([
+            r.get("id"),
+            r.get("created_at"),
+            r.get("agent_id"),
+            r.get("session_id"),
+            r.get("memory_type"),
+            r.get("content"),
+            r.get("importance"),
+            ",".join(tags) if isinstance(tags, list) else ""
+        ])
+    buffer.seek(0)
+    return StreamingResponse(iter([buffer.getvalue()]), media_type="text/csv")
 
 
 if __name__ == "__main__":
