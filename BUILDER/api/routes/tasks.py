@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from BUILDER.api import models as m
+from BUILDER.api.routes.ws import broadcast
 
 logger = logging.getLogger("builder.api.tasks")
 router = APIRouter(tags=["tasks"])
@@ -25,6 +26,7 @@ async def create_task(body: m.TaskCreate):
     if body.assigned_to:
         tasks.assign(task.id, body.assigned_to)
     audit.log("task_create", task_id=task.id, details=body.title)
+    await broadcast("task_create", task.to_dict())
     return m.TaskResponse(**task.to_dict())
 
 
@@ -84,11 +86,13 @@ async def dispatch_task(task_id: str):
     tasks.assign(task_id, routing["agent"])
     registry.update_status(routing["agent"], "active", task_id)
     audit.log("dispatch", agent=routing["agent"], task_id=task_id, details=f"type={routing['task_type']}, bridge={bridge_name}")
+    await broadcast("task_dispatch", {"task_id": task_id, "agent": routing["agent"], "task_type": routing["task_type"], "bridge": bridge_name})
 
     # Execute via appropriate bridge
     result = None
     if bridge_name == "ollama":
         tasks.update_status(task_id, "running")
+        await broadcast("task_running", {"task_id": task_id, "agent": routing["agent"]})
         result = await ollama_bridge.execute(
             task,
             model=routing.get("model"),
@@ -99,23 +103,28 @@ async def dispatch_task(task_id: str):
             tasks.complete(task_id, result["response"])
             registry.update_status(routing["agent"], "idle")
             audit.log("complete", agent=routing["agent"], task_id=task_id, status="done")
+            await broadcast("task_complete", {"task_id": task_id, "agent": routing["agent"], "status": "done"})
         else:
             tasks.fail(task_id, result.get("error", "Unknown error"))
             registry.update_status(routing["agent"], "idle")
             audit.log("complete", agent=routing["agent"], task_id=task_id, status="failed", details=result.get("error", ""))
+            await broadcast("task_failed", {"task_id": task_id, "agent": routing["agent"], "error": result.get("error", "")})
 
     elif bridge_name == "claude":
         result = await claude_bridge.execute(task)
         tasks.update_status(task_id, "running")
         audit.log("dispatched_file", agent="CLAUDE_LUSTRO", task_id=task_id, details=result.get("file", ""))
+        await broadcast("task_running", {"task_id": task_id, "agent": "CLAUDE_LUSTRO", "mode": "async_file"})
 
     elif bridge_name == "codex":
         result = await codex_bridge.execute(task)
         tasks.update_status(task_id, "running")
+        await broadcast("task_running", {"task_id": task_id, "agent": "CODEX", "mode": "async_file"})
 
     elif bridge_name == "gemini":
         result = await gemini_bridge.execute(task)
         tasks.update_status(task_id, "running")
+        await broadcast("task_running", {"task_id": task_id, "agent": "GEMINI_ARCHITECT", "mode": "async_file"})
 
     else:
         raise HTTPException(400, f"Unknown bridge: {bridge_name}")

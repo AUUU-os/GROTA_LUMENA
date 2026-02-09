@@ -37,10 +37,72 @@ start_time: float = 0
 
 
 def _on_inbox_file(path):
-    """Handle new file in INBOX/."""
-    logger.info(f"INBOX file detected: {path.name}")
+    """Handle new file in INBOX/. Auto-pickup RESULT files to complete tasks."""
+    import re
+    from pathlib import Path
+    path = Path(path) if not isinstance(path, Path) else path
+    name = path.name
+    logger.info(f"INBOX file detected: {name}")
+
     if audit:
-        audit.log("inbox_file", details=str(path.name))
+        audit.log("inbox_file", details=name)
+
+    # Auto-pickup: RESULT_{task_id}_FROM_{agent}.md
+    match = re.match(r"RESULT_([a-f0-9]+)_FROM_(\w+)\.md", name)
+    if match and tasks:
+        task_id = match.group(1)
+        agent_name = match.group(2).upper()
+        task = tasks.get(task_id)
+        if task and task.status == "running":
+            try:
+                content = path.read_text(encoding="utf-8", errors="replace")
+                tasks.complete(task_id, content)
+                if registry:
+                    registry.update_status(task.assigned_to or agent_name, "idle")
+                if audit:
+                    audit.log("auto_complete", agent=agent_name, task_id=task_id, status="done", details="Picked up from INBOX")
+                logger.info(f"Auto-completed task {task_id} from {agent_name}")
+
+                # Broadcast via WebSocket
+                _schedule_broadcast("task_complete", {
+                    "task_id": task_id,
+                    "agent": agent_name,
+                    "status": "done",
+                })
+            except Exception as e:
+                logger.error(f"Failed to auto-pickup result for {task_id}: {e}")
+
+    # Also detect CODEX_RESULT_*.md
+    codex_match = re.match(r"CODEX_RESULT_(\d{8}_\d{6})\.md", name)
+    if codex_match and tasks:
+        # Find running task assigned to CODEX
+        for t in tasks.list(status="running"):
+            if t.assigned_to == "CODEX":
+                try:
+                    content = path.read_text(encoding="utf-8", errors="replace")
+                    tasks.complete(t.id, content)
+                    if registry:
+                        registry.update_status("CODEX", "idle")
+                    if audit:
+                        audit.log("auto_complete", agent="CODEX", task_id=t.id, status="done", details="Codex result picked up")
+                    _schedule_broadcast("task_complete", {"task_id": t.id, "agent": "CODEX", "status": "done"})
+                except Exception as e:
+                    logger.error(f"Failed to pickup Codex result: {e}")
+                break
+
+
+def _schedule_broadcast(event_type: str, data: dict):
+    """Schedule a WebSocket broadcast from a sync context (FileWatcher thread)."""
+    import asyncio
+    from BUILDER.api.routes.ws import broadcast
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(broadcast(event_type, data))
+        else:
+            loop.run_until_complete(broadcast(event_type, data))
+    except RuntimeError:
+        pass  # No event loop available
 
 
 def _on_state_change(path):
