@@ -1,0 +1,81 @@
+# LAB_FILES PATTERNS TO ADD (insert before line 155 "# Network commands")
+
+            # ==================================================
+            # FILE COMMANDS (LAB_FILES)
+            # ==================================================
+
+            # FILE_READ
+            {
+                "regex": r"(?:show|read|cat|display)\s+(?:me\s+)?(?:the\s+)?(?:file\s+)?(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_read",
+                "extract": lambda m: {"path": m.group(1).strip()}
+            },
+
+            # FILE_LIST  
+            {
+                "regex": r"(?:list|ls|show)\s+(?:files\s+in\s+)?(?:the\s+)?(?:directory\s+)?(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_list",
+                "extract": lambda m: {"path": m.group(1).strip()}
+            },
+            {
+                "regex": r"what\s+(?:files\s+)?(?:are\s+)?in\s+(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_list",
+                "extract": lambda m: {"path": m.group(1).strip()}
+            },
+
+            # FILE_INFO
+            {
+                "regex": r"(?:show\s+)?(?:file\s+)?info(?:\s+for)?\s+(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_info",
+                "extract": lambda m: {"path": m.group(1).strip()}
+            },
+
+            # FILE_WRITE
+            {
+                "regex": r"write\s+(.+?)\s+to\s+(?:file\s+)?(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_write",
+                "extract": lambda m: {"content": m.group(1).strip(), "path": m.group(2).strip()}
+            },
+            {
+                "regex": r"create\s+(?:a\s+)?file\s+(?:called\s+)?(.+?)(?:\s+with\s+(.+))?",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_write",
+                "extract": lambda m: {"path": m.group(1).strip(), "content": m.group(2).strip() if m.group(2) else ""}
+            },
+
+            # FILE_APPEND
+            {
+                "regex": r"append\s+(.+?)\s+to\s+(?:file\s+)?(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_append",
+                "extract": lambda m: {"content": m.group(1).strip(), "path": m.group(2).strip()}
+            },
+
+            # FILE_COPY
+            {
+                "regex": r"copy\s+(.+?)\s+to\s+(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_copy",
+                "extract": lambda m: {"source": m.group(1).strip(), "destination": m.group(2).strip()}
+            },
+
+            # FILE_MOVE
+            {
+                "regex": r"(?:move|rename)\s+(.+?)\s+to\s+(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_move",
+                "extract": lambda m: {"source": m.group(1).strip(), "destination": m.group(2).strip()}
+            },
+
+            # FILE_DELETE
+            {
+                "regex": r"(?:delete|remove|rm)\s+(?:file\s+)?(.+)",
+                "module": ModuleType.LAB_FILES.value,
+                "operation": "file_delete",
+                "extract": lambda m: {"path": m.group(1).strip()}
+            },
