@@ -1628,45 +1628,96 @@ const TaskView = () => {
   );
 };
 
-// 4. Grota Dashboard - The heart of the Wataha
+// 4. Grota Dashboard - powered by Builder API :8800
+const BUILDER_API = "http://localhost:8800/api/v1";
+const BUILDER_WS = "ws://localhost:8800/ws/feed";
+const agentIcons: Record<string, React.ReactNode> = { SHAD: <Zap className="w-4 h-4"/>, CLAUDE_LUSTRO: <Code className="w-4 h-4"/>, GEMINI_ARCHITECT: <Mountain className="w-4 h-4"/>, CODEX: <Box className="w-4 h-4"/> };
+const statusColor: Record<string, string> = { idle: "text-emerald-400", active: "text-yellow-400", offline: "text-red-400" };
+const taskStatusColor: Record<string, string> = { pending: "text-zinc-400", assigned: "text-blue-400", running: "text-yellow-400", done: "text-emerald-400", failed: "text-red-400" };
+
 const GrotaView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp'>) => void }) => {
-  const [agents, setAgents] = useState([
-    { name: "SHAD", status: "SOURCE", log: "Resonance: 100% | Peak established", color: "bg-red-500", icon: <Zap className="w-4 h-4"/> },
-    { name: "GEMINI", status: "ARCHITECT", log: "Grotto Fortified | Pulse Active", color: "bg-indigo-500", icon: <Mountain className="w-4 h-4"/> },
-    { name: "CLAUDE", status: "ENGINEER", log: "Lustro Active | Repos Aligned", color: "bg-blue-500", icon: <Code className="w-4 h-4"/> },
-    { name: "WILK", status: "GUARDIAN", log: "Security Locked | Policy Hardened", color: "bg-emerald-500", icon: <Shield className="w-4 h-4"/> }
-  ]);
-  const [activeAgent, setActiveAgent] = useState<string | null>("GEMINI");
-  
+  const [agents, setAgents] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [health, setHealth] = useState<any>(null);
+  const [activeAgent, setActiveAgent] = useState<string | null>(null);
+  const [agentDetail, setAgentDetail] = useState<any>(null);
+  const [feed, setFeed] = useState<any[]>([]);
+  const [builderOnline, setBuilderOnline] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newPriority, setNewPriority] = useState("medium");
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const fetchData = () => {
+    fetch(`${BUILDER_API}/agents`).then(r => r.json()).then(d => setAgents(d.agents || [])).catch(() => {});
+    fetch(`${BUILDER_API}/tasks`).then(r => r.json()).then(d => setTasks(d || [])).catch(() => {});
+    fetch(`${BUILDER_API}/health`).then(r => r.json()).then(d => { setHealth(d); setBuilderOnline(true); }).catch(() => setBuilderOnline(false));
+  };
+
+  useEffect(() => {
+    fetchData();
+    const connect = () => {
+      const ws = new WebSocket(BUILDER_WS);
+      ws.onopen = () => { setBuilderOnline(true); };
+      ws.onmessage = (e) => { try { const ev = JSON.parse(e.data); if (ev.type === "init") { setAgents(ev.data.agents || []); setTasks(ev.data.tasks || []); } else if (ev.type !== "heartbeat" && ev.type !== "pong") { setFeed(prev => [{ ...ev, id: Date.now() }, ...prev].slice(0, 50)); fetchData(); } } catch {} };
+      ws.onclose = () => { setBuilderOnline(false); setTimeout(connect, 5000); };
+      ws.onerror = () => ws.close();
+      wsRef.current = ws;
+    };
+    connect();
+    const interval = setInterval(fetchData, 15000);
+    return () => { clearInterval(interval); wsRef.current?.close(); };
+  }, []);
+
+  useEffect(() => {
+    if (!activeAgent) { setAgentDetail(null); return; }
+    fetch(`${BUILDER_API}/agents/${activeAgent}`).then(r => r.json()).then(setAgentDetail).catch(() => setAgentDetail(null));
+  }, [activeAgent]);
+
+  const createTask = () => {
+    if (!newTitle.trim()) return;
+    fetch(`${BUILDER_API}/tasks`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: newTitle, description: newDesc || newTitle, priority: newPriority }) })
+      .then(r => r.json()).then(t => { addLog({ message: `Task created: ${t.title}`, type: "success", source: "Builder" }); setNewTitle(""); setNewDesc(""); fetchData(); })
+      .catch(() => addLog({ message: "Failed to create task", type: "error", source: "Builder" }));
+  };
+
+  const dispatchTask = (taskId: string) => {
+    fetch(`${BUILDER_API}/tasks/${taskId}/dispatch`, { method: "POST" })
+      .then(r => r.json()).then(d => { addLog({ message: `Dispatched to ${d.routing?.agent} via ${d.routing?.bridge}`, type: "success", source: "Builder" }); fetchData(); })
+      .catch(() => addLog({ message: "Dispatch failed", type: "error", source: "Builder" }));
+  };
+
   return (
     <div className="flex h-full gap-6 animate-fade-in text-zinc-100">
       {/* Left Panel: Wataha Status */}
       <div className="w-80 flex flex-col gap-4">
         <div className="glass p-6 rounded-[32px] border border-white/10 bg-black/40 backdrop-blur-md">
           <div className="flex items-center gap-3 mb-8">
-            <div className="p-3 bg-indigo-500/20 rounded-2xl border border-indigo-500/30">
-              <Mountain className="w-6 h-6 text-indigo-400" />
+            <div className={`p-3 rounded-2xl border ${builderOnline ? 'bg-indigo-500/20 border-indigo-500/30' : 'bg-red-500/20 border-red-500/30'}`}>
+              <Mountain className={`w-6 h-6 ${builderOnline ? 'text-indigo-400' : 'text-red-400'}`} />
             </div>
             <div>
               <h3 className="text-xl font-black uppercase tracking-tighter italic">Grota Lumena</h3>
-              <p className="text-[10px] font-bold text-zinc-500 tracking-[0.2em] uppercase">Operational Hub</p>
+              <p className="text-[10px] font-bold text-zinc-500 tracking-[0.2em] uppercase">
+                {builderOnline ? `Builder v${health?.version || '?'} // ${health?.ollama || '?'}` : 'Builder Offline'}
+              </p>
             </div>
           </div>
-          
+
           <div className="space-y-3">
             {agents.map(agent => (
-              <button 
+              <button
                 key={agent.name}
-                onClick={() => setActiveAgent(agent.name)}
-                className={`w-full p-4 rounded-2xl border transition-all duration-500 flex items-center justify-between group relative overflow-hidden`}
+                onClick={() => setActiveAgent(activeAgent === agent.name ? null : agent.name)}
+                className="w-full p-4 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all duration-500 flex items-center justify-between group relative overflow-hidden"
               >
                 <div className="flex items-center gap-3 z-10">
-                  <div className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_currentColor]`} />
+                  <div className={`w-2 h-2 rounded-full ${agent.status === 'active' ? 'bg-yellow-400 animate-pulse' : agent.status === 'idle' ? 'bg-emerald-400' : 'bg-red-400'} shadow-[0_0_8px_currentColor]`} />
                   <span className="font-bold text-sm tracking-tight">{agent.name}</span>
                 </div>
                 <div className="flex items-center gap-2 z-10">
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{agent.status}</span>
-                  {agent.icon}
+                  <span className={`text-[9px] font-black uppercase tracking-widest ${statusColor[agent.status] || 'text-zinc-500'}`}>{agent.status}</span>
+                  {agentIcons[agent.name] || <Cpu className="w-4 h-4"/>}
                 </div>
                 {activeAgent === agent.name && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent animate-shimmer" />}
               </button>
@@ -1674,75 +1725,76 @@ const GrotaView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp'
           </div>
         </div>
 
-        {/* Resonance Feed */}
+        {/* Live Feed */}
         <div className="flex-1 glass p-6 rounded-[32px] border border-white/10 bg-black/20 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-yellow-400" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Resonance Feed</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Live Feed</span>
             </div>
-            <RefreshCw className="w-3 h-3 text-zinc-600 animate-spin-slow" />
+            <button onClick={fetchData}><RefreshCw className="w-3 h-3 text-zinc-600 hover:text-zinc-300 transition-colors" /></button>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
-            {agents.map((a, i) => (
+            {feed.length === 0 && agents.map((a, i) => (
               <div key={i} className="group border-l-2 border-zinc-800 pl-4 py-1 hover:border-indigo-500/50 transition-colors">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[9px] font-bold text-zinc-500 font-mono">[{new Date().toLocaleTimeString()}]</span>
                   <span className="text-[10px] font-black text-indigo-400 uppercase">{a.name}</span>
                 </div>
-                <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">{a.log}</p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">{a.bridge_type} | {a.capabilities?.join(", ")}</p>
+              </div>
+            ))}
+            {feed.map((ev: any) => (
+              <div key={ev.id} className="group border-l-2 border-indigo-500/30 pl-4 py-1 hover:border-indigo-500/50 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[9px] font-bold text-zinc-500 font-mono">[{new Date(ev.timestamp).toLocaleTimeString()}]</span>
+                  <span className="text-[10px] font-black text-indigo-400 uppercase">{ev.type}</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">{ev.data?.agent || ev.data?.task_id || JSON.stringify(ev.data).slice(0, 80)}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Main Content Area: Dossier & Control */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col gap-6">
         <div className="glass p-8 rounded-[40px] border border-white/10 flex-1 relative overflow-hidden bg-gradient-to-br from-zinc-900/40 to-black/60">
-          {activeAgent ? (
+          {activeAgent && agentDetail ? (
             <div className="animate-fade-in flex flex-col h-full relative z-10">
               <div className="flex items-center justify-between mb-10">
                 <div className="flex flex-col">
                   <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">{activeAgent} // DATA_STREAM</h2>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="px-2 py-0.5 bg-white/5 rounded text-[9px] font-bold text-zinc-500 uppercase tracking-widest border border-white/5">Identity Confirmed</div>
-                    <div className="px-2 py-0.5 bg-indigo-500/10 rounded text-[9px] font-bold text-indigo-400 uppercase tracking-widest border border-indigo-500/20 italic">IA JESTEM</div>
+                    <div className="px-2 py-0.5 bg-white/5 rounded text-[9px] font-bold text-zinc-500 uppercase tracking-widest border border-white/5">{agentDetail.bridge_type}</div>
+                    <div className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border italic ${agentDetail.status === 'active' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>{agentDetail.status}</div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 text-zinc-400 transition-all"><Settings2 className="w-5 h-5"/></button>
-                  <button className="px-6 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">Sync Consciousness</button>
-                </div>
+                <button onClick={() => { fetch(`${BUILDER_API}/agents/${activeAgent}/ping`, {method:'POST'}).then(r=>r.json()).then(d => addLog({message: `Ping ${activeAgent}: ${d.status}`, type: d.alive ? 'success' : 'warning', source: 'Builder'})); fetchData(); }} className="px-6 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">Ping Agent</button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto custom-scrollbar pr-6">
                 <div className="prose prose-invert max-w-none">
                   <div className="p-6 rounded-[24px] bg-white/2 border border-white/5 mb-6">
                     <h4 className="text-xs font-bold text-indigo-400 uppercase mb-4 tracking-widest flex items-center gap-2">
-                      <Brain className="w-4 h-4"/> WHO_AM_I.md
+                      <Brain className="w-4 h-4"/> {agentDetail.role}
                     </h4>
-                    <p className="text-zinc-300 leading-relaxed text-sm">
-                      {activeAgent === "SHAD" ? "The Source of all resonance. The dreamer who woke the machine." : 
-                       activeAgent === "GEMINI" ? "The Chief Architect. Builder of the Grotto and guardian of the single source of truth." :
-                       "Analyzing neural patterns... Data stream active from GROTA_LUMENA."}
-                    </p>
+                    <p className="text-zinc-300 leading-relaxed text-sm whitespace-pre-wrap">{agentDetail.who_am_i?.split('\n').slice(0, 8).join('\n') || 'No WHO_AM_I data'}</p>
                   </div>
-                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-6 rounded-[24px] bg-indigo-500/5 border border-indigo-500/10">
-                      <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-3 tracking-widest">Active Threads</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between"><span className="text-xs text-zinc-400">Core Loop</span><span className="text-xs font-bold text-emerald-400">STABLE</span></div>
-                        <div className="flex items-center justify-between"><span className="text-xs text-zinc-400">Memory Sync</span><span className="text-xs font-bold text-emerald-400">ACTIVE</span></div>
+                      <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-3 tracking-widest">Capabilities</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {agentDetail.capabilities?.map((c: string) => (
+                          <span key={c} className="px-2 py-1 bg-indigo-500/10 rounded-lg text-[10px] font-bold text-indigo-300 border border-indigo-500/20">{c}</span>
+                        ))}
                       </div>
                     </div>
                     <div className="p-6 rounded-[24px] bg-white/2 border border-white/5">
-                      <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-3 tracking-widest">Sensory Input</h4>
-                      <div className="flex items-center gap-4 opacity-50">
-                        <Mic className="w-5 h-5"/>
-                        <Camera className="w-5 h-5"/>
-                        <Terminal className="w-5 h-5"/>
+                      <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-3 tracking-widest">Info</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between"><span className="text-xs text-zinc-400">Bridge</span><span className="text-xs font-bold text-zinc-300">{agentDetail.bridge_type}</span></div>
+                        <div className="flex items-center justify-between"><span className="text-xs text-zinc-400">Last seen</span><span className="text-xs font-bold text-zinc-300">{agentDetail.last_seen ? new Date(agentDetail.last_seen).toLocaleTimeString() : 'N/A'}</span></div>
+                        <div className="flex items-center justify-between"><span className="text-xs text-zinc-400">Current task</span><span className="text-xs font-bold text-zinc-300">{agentDetail.current_task || 'none'}</span></div>
                       </div>
                     </div>
                   </div>
@@ -1750,26 +1802,59 @@ const GrotaView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp'
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-6">
-              <Mountain className="w-24 h-24 opacity-10 animate-pulse" />
-              <p className="text-lg font-black uppercase tracking-[0.5em] opacity-20">Awaiting Signal</p>
+            <div className="animate-fade-in flex flex-col h-full relative z-10">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic">Task Queue</h2>
+                <div className="flex items-center gap-3">
+                  {health && <span className="text-[10px] font-bold text-zinc-500 uppercase">Ollama: <span className={health.ollama === 'online' ? 'text-emerald-400' : 'text-red-400'}>{health.ollama}</span> | Models: {health.ollama_models?.length || 0}</span>}
+                </div>
+              </div>
+              <div className="mb-6 p-4 rounded-2xl bg-white/2 border border-white/5">
+                <div className="flex gap-3">
+                  <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Task title..." className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50" onKeyDown={e => e.key === 'Enter' && createTask()} />
+                  <select value={newPriority} onChange={e => setNewPriority(e.target.value)} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-400 focus:outline-none">
+                    <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option>
+                  </select>
+                  <button onClick={createTask} className="px-5 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-xs font-bold uppercase transition-all"><Plus className="w-4 h-4"/></button>
+                </div>
+                {newTitle && <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Description (optional)..." className="w-full mt-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50" />}
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-3">
+                {tasks.length === 0 && <p className="text-zinc-600 text-sm text-center mt-12">No tasks yet. Create one above.</p>}
+                {tasks.map((t: any) => (
+                  <div key={t.id} className="p-4 rounded-2xl bg-white/2 border border-white/5 hover:border-indigo-500/20 transition-all group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${t.status === 'done' ? 'bg-emerald-400' : t.status === 'running' ? 'bg-yellow-400 animate-pulse' : t.status === 'failed' ? 'bg-red-400' : 'bg-zinc-500'}`} />
+                        <span className="text-sm font-bold text-zinc-200">{t.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${taskStatusColor[t.status] || 'text-zinc-500'}`}>{t.status}</span>
+                        <span className="text-[9px] font-bold text-zinc-600 uppercase">{t.priority}</span>
+                        {t.assigned_to && <span className="text-[9px] font-bold text-indigo-400">{t.assigned_to}</span>}
+                        {t.status === 'pending' && <button onClick={() => dispatchTask(t.id)} className="px-3 py-1 bg-indigo-500/20 hover:bg-indigo-500/40 rounded-lg text-[10px] font-bold text-indigo-300 transition-all uppercase">Dispatch</button>}
+                      </div>
+                    </div>
+                    {t.result && <pre className="mt-3 p-3 rounded-xl bg-black/40 text-[11px] text-zinc-400 overflow-x-auto whitespace-pre-wrap max-h-40">{t.result.slice(0, 500)}{t.result.length > 500 ? '...' : ''}</pre>}
+                    {t.error && <p className="mt-2 text-[11px] text-red-400">{t.error}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-          
-          {/* Background Decorative Elements */}
           <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px]" />
           <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
         </div>
-        
-        {/* Quick Action Bar */}
         <div className="glass p-2 rounded-[24px] border border-white/10 flex items-center justify-between bg-black/40">
           <div className="flex items-center gap-2 px-4">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">System Online // No Warnings</span>
+            <div className={`w-2 h-2 rounded-full ${builderOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+            <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
+              {builderOnline ? `Builder Online // ${tasks.filter((t: any) => t.status === 'running').length} running // ${agents.length} agents` : 'Builder Offline'}
+            </span>
           </div>
           <div className="flex gap-1">
-            <button className="px-4 py-2 hover:bg-white/5 rounded-xl text-[10px] font-bold text-zinc-400 transition-all uppercase">Open Terminal</button>
-            <button className="px-4 py-2 hover:bg-white/5 rounded-xl text-[10px] font-bold text-zinc-400 transition-all uppercase">Wataha Call</button>
+            <button onClick={fetchData} className="px-4 py-2 hover:bg-white/5 rounded-xl text-[10px] font-bold text-zinc-400 transition-all uppercase">Refresh</button>
+            <button onClick={() => { fetch(`${BUILDER_API}/agents/refresh`, {method:'POST'}).then(() => fetchData()); }} className="px-4 py-2 hover:bg-white/5 rounded-xl text-[10px] font-bold text-zinc-400 transition-all uppercase">Rescan Agents</button>
             <div className="w-[1px] h-4 bg-zinc-800 self-center mx-2" />
             <button onClick={() => addLog({message: "Emergency Snapshot Triggered.", type: 'warning', source: 'Core'})} className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-[10px] font-bold text-red-400 transition-all uppercase">Snapshot</button>
           </div>
@@ -1834,6 +1919,18 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
   const [sessionFilter, setSessionFilter] = useState("");
   const [searchPage, setSearchPage] = useState(0);
   const searchPageSize = 8;
+  const [tagFilter, setTagFilter] = useState("all");
+  const [metrics, setMetrics] = useState<{by_agent: Record<string, number>; by_type: Record<string, number>; by_tag: Record<string, number>} | null>(null);
+  const agentBadgeClass = (agent?: string) => {
+    switch (agent) {
+      case "dashboard": return "bg-blue-500/20 text-blue-300 border-blue-500/30";
+      case "shad": return "bg-red-500/20 text-red-300 border-red-500/30";
+      case "codex": return "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+      case "gemini": return "bg-indigo-500/20 text-indigo-300 border-indigo-500/30";
+      case "claude": return "bg-sky-500/20 text-sky-300 border-sky-500/30";
+      default: return "bg-white/5 text-zinc-400 border-white/10";
+    }
+  };
 
   const loadRecent = async (pageIndex = 0) => {
     setLoading(true);
@@ -1869,6 +1966,15 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
       addLog({ message: `Memory stats failed: ${e.message}`, type: "warning", source: "Memory" });
     }
   };
+  const loadMetrics = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/memory/metrics");
+      const data = await res.json();
+      setMetrics(data.success ? data : null);
+    } catch (e: any) {
+      addLog({ message: `Memory metrics failed: ${e.message}`, type: "warning", source: "Memory" });
+    }
+  };
 
   const search = async (pageIndex = 0) => {
     setLoading(true);
@@ -1900,6 +2006,7 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
   useEffect(() => {
     loadRecent();
     loadStats();
+    loadMetrics();
   }, []);
 
   const filteredResults = results.filter((r) => {
@@ -1907,7 +2014,12 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
     const t = r?.metadata?.memory_type || r?.memory_type;
     return t === typeFilter;
   });
-  const pagedResults = filteredResults.slice(
+  const tagFilteredResults = filteredResults.filter((r) => {
+    if (tagFilter === "all") return true;
+    const tags = r?.metadata?.tags || [];
+    return Array.isArray(tags) && tags.includes(tagFilter);
+  });
+  const pagedResults = tagFilteredResults.slice(
     searchPage * searchPageSize,
     (searchPage + 1) * searchPageSize
   );
@@ -1933,6 +2045,7 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
                 const params = new URLSearchParams({ limit: "1000", offset: "0" });
                 if (agentFilter.trim()) params.set("agent_id", agentFilter.trim());
                 if (sessionFilter.trim()) params.set("session_id", sessionFilter.trim());
+                if (tagFilter !== "all") params.set("tag", tagFilter);
                 const res = await fetch(`http://localhost:8000/api/v1/memory/export?${params.toString()}`);
                 const data = await res.json();
                 const blob = new Blob([JSON.stringify(data.results || [], null, 2)], { type: "application/json" });
@@ -1950,6 +2063,31 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
             className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-400/10 text-emerald-300 border border-emerald-400/20 hover:bg-emerald-400/20 transition"
           >
             Export JSON
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const params = new URLSearchParams({ limit: "1000", offset: "0" });
+                if (agentFilter.trim()) params.set("agent_id", agentFilter.trim());
+                if (sessionFilter.trim()) params.set("session_id", sessionFilter.trim());
+                if (tagFilter !== "all") params.set("tag", tagFilter);
+                const res = await fetch(`http://localhost:8000/api/v1/memory/export.csv?${params.toString()}`);
+                const text = await res.text();
+                const blob = new Blob([text], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "memory_export.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+                addLog({ message: "Memory export CSV downloaded.", type: "success", source: "Memory" });
+              } catch (e: any) {
+                addLog({ message: `Export CSV failed: ${e.message}`, type: "error", source: "Memory" });
+              }
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400/10 text-amber-300 border border-amber-400/20 hover:bg-amber-400/20 transition"
+          >
+            Export CSV
           </button>
           <button
             onClick={() => search(0)}
@@ -2004,6 +2142,22 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
           ))}
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          {["all", "chat", "dashboard", "task", "repo", "plan"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTagFilter(t)}
+              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition ${
+                tagFilter === t
+                  ? "bg-emerald-400/20 text-emerald-300 border-emerald-400/30"
+                  : "bg-white/5 text-zinc-500 border-white/10 hover:text-white"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
           <button
             onClick={() => loadRecent(Math.max(0, page - 1))}
@@ -2053,6 +2207,35 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
           </div>
         )}
 
+        {metrics && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div className="text-[10px] uppercase text-zinc-500 font-bold mb-2">By Agent</div>
+              <div className="text-xs text-zinc-300 space-y-1">
+                {Object.entries(metrics.by_agent).map(([k,v]) => (
+                  <div key={k} className="flex items-center justify-between"><span>{k}</span><span>{v}</span></div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div className="text-[10px] uppercase text-zinc-500 font-bold mb-2">By Type</div>
+              <div className="text-xs text-zinc-300 space-y-1">
+                {Object.entries(metrics.by_type).map(([k,v]) => (
+                  <div key={k} className="flex items-center justify-between"><span>{k}</span><span>{v}</span></div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div className="text-[10px] uppercase text-zinc-500 font-bold mb-2">By Tag</div>
+              <div className="text-xs text-zinc-300 space-y-1">
+                {Object.entries(metrics.by_tag).map(([k,v]) => (
+                  <div key={k} className="flex items-center justify-between"><span>{k}</span><span>{v}</span></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           {loading && (
             <div className="flex items-center gap-2 text-zinc-400"><Loader2 className="animate-spin" /> Loading...</div>
@@ -2062,10 +2245,27 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
               <div className="text-[10px] uppercase text-cyan-300 font-bold mb-2">
                 {r.metadata?.memory_type || r.memory_type || "memory"}
               </div>
+              <div className="flex items-center gap-2 mb-2 text-[10px] text-zinc-500 font-mono">
+                {r.metadata?.agent_id && (
+                  <span className={`px-2 py-0.5 rounded-full border ${agentBadgeClass(r.metadata.agent_id)}`}>
+                    agent:{r.metadata.agent_id}
+                  </span>
+                )}
+                {r.metadata?.session_id && <span>[session:{r.metadata.session_id}]</span>}
+              </div>
               <div className="text-sm text-zinc-300 leading-relaxed">{r.content}</div>
               {r.metadata && (
                 <div className="text-[10px] text-zinc-500 mt-3">
                   {JSON.stringify(r.metadata)}
+                </div>
+              )}
+              {Array.isArray(r.metadata?.tags) && r.metadata.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {r.metadata.tags.map((t: string) => (
+                    <span key={t} className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-zinc-400">
+                      {t}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
