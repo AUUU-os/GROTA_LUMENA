@@ -21,6 +21,7 @@ class TaskCreate(BaseModel):
     description: str = Field(..., min_length=1)
     priority: str = Field("medium", pattern=r"^(low|medium|high|critical)$")
     assigned_to: Optional[str] = None
+    depends_on: list[str] = []
 
 
 class TaskUpdate(BaseModel):
@@ -31,6 +32,7 @@ class TaskUpdate(BaseModel):
     assigned_to: Optional[str] = None
     result: Optional[str] = None
     error: Optional[str] = None
+    depends_on: list[str] | None = None
 
 
 class TaskResponse(BaseModel):
@@ -45,6 +47,7 @@ class TaskResponse(BaseModel):
     result: Optional[str] = None
     error: Optional[str] = None
     task_type: Optional[str] = None
+    depends_on: list[str] = []
 
 
 class DispatchRequest(BaseModel):

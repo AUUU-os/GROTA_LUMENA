@@ -4,6 +4,25 @@ All notable changes to Builder will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-02-09
+
+### Added
+- Smart Dispatcher: Ollama-based intent classification (llama3.2) as fallback when keyword matching is uncertain
+- Confidence scoring: dispatch returns confidence (1.0 / 0.7 / 0.5) based on match quality
+- Availability check: dispatcher verifies agent is idle before routing, falls back to OLLAMA_WORKER
+- Priority queue: TaskManager.pending_queue() sorts by priority then creation time
+- Task dependencies: depends_on field, is_ready() check, get_blocked() query
+- next_task() — returns highest priority ready task
+- Classify endpoint: POST /tasks/{id}/classify — preview routing without dispatch
+- Queue endpoint: GET /queue — pending tasks sorted by priority with dependency status
+- Dependency check before dispatch — blocked tasks cannot be dispatched
+
+### Changed
+- Dispatcher accepts optional registry for availability checking
+- dispatch() returns confidence and fallback fields
+- create_task wires depends_on from request body
+- TaskManager.list() accepts sort_by="priority" parameter
+
 ## [0.3.0] - 2026-02-09
 
 ### Added

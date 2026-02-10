@@ -146,7 +146,7 @@ async def lifespan(app: FastAPI):
     # Initialize components
     registry = AgentRegistry()
     tasks = TaskManager()
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(registry=registry)
     audit = AuditLog()
     ollama_bridge = OllamaBridge()
     claude_bridge = ClaudeBridge()

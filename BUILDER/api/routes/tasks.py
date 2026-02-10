@@ -23,6 +23,9 @@ def _get_state():
 async def create_task(body: m.TaskCreate):
     tasks, dispatcher, audit, *_ = _get_state()
     task = tasks.create(body.title, body.description, body.priority)
+    if body.depends_on:
+        for dep_id in body.depends_on:
+            tasks.add_dependency(task.id, dep_id)
     if body.assigned_to:
         tasks.assign(task.id, body.assigned_to)
     audit.log("task_create", task_id=task.id, details=body.title)
@@ -83,6 +86,10 @@ async def dispatch_task(task_id: str, body: m.DispatchRequest | None = None):
 
     if task.status in ("running", "done"):
         raise HTTPException(400, f"Task already {task.status}")
+
+    # Check dependencies
+    if not tasks.is_ready(task_id):
+        raise HTTPException(400, "Task has unmet dependencies — cannot dispatch yet")
 
     # Classify and route (with optional override)
     routing = dispatcher.dispatch(task)
@@ -267,3 +274,15 @@ async def cancel_task(task_id: str):
     await broadcast("task_cancelled", {"task_id": task_id, "agent": agent})
 
     return {"cancelled": True, "task": tasks.get(task_id).to_dict()}
+
+
+@router.post("/tasks/{task_id}/classify")
+async def classify_task(task_id: str):
+    """Classify a task without dispatching it. Returns routing decision for preview."""
+    tasks, dispatcher, *_ = _get_state()
+    task = tasks.get(task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    routing = dispatcher.dispatch(task)
+    # Don't actually assign/execute, just return classification
+    return {"task_id": task_id, "routing": routing}

@@ -78,3 +78,20 @@ def _count_by(items, attr):
         val = getattr(item, attr, "unknown")
         counts[val] = counts.get(val, 0) + 1
     return counts
+
+
+@router.get("/queue")
+async def get_queue():
+    """Returns the pending task queue sorted by priority with dependency status."""
+    from BUILDER.api.app import tasks
+    if not tasks:
+        return {"queue": []}
+    pending = tasks.list(status="pending")
+    queue = []
+    for t in pending:
+        ready = tasks.is_ready(t.id) if hasattr(tasks, 'is_ready') else True
+        queue.append({**t.to_dict(), "ready": ready})
+    # Sort by priority
+    prio = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    queue.sort(key=lambda x: (prio.get(x["priority"], 9), x["created_at"]))
+    return {"queue": queue, "total": len(queue)}
