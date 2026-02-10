@@ -59,6 +59,18 @@ async def recent_memory(limit: int = 10, offset: int = 0, agent_id: str = None, 
     return {"success": True, "results": results}
 
 
+@router.get("/memory/collective")
+async def collective_memory(limit: int = 10, offset: int = 0):
+    results = await memory_engine.retrieve_memories(
+        query="",
+        limit=limit,
+        strategy="temporal",
+        offset=offset,
+        agent_id="collective",
+    )
+    return {"success": True, "results": results}
+
+
 @router.get("/memory/stats")
 async def memory_stats():
     return {"success": True, "stats": memory_engine.vector_db.get_stats()}
@@ -138,3 +150,15 @@ async def memory_export_csv(limit: int = 1000, offset: int = 0, agent_id: str = 
         ])
     buffer.seek(0)
     return StreamingResponse(iter([buffer.getvalue()]), media_type="text/csv")
+
+
+@router.post("/memory/backup/run")
+async def memory_backup_run(keep_days: int = 7):
+    path = await memory_engine.backup_to_file(keep_days=keep_days)
+    return {"success": True, "path": path}
+
+
+@router.post("/memory/backup/cleanup")
+async def memory_backup_cleanup(keep_days: int = 7):
+    removed = memory_engine.cleanup_backups(keep_days=keep_days)
+    return {"success": True, "removed": removed}

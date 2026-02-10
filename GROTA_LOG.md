@@ -61,3 +61,64 @@
 - Updated: CORE/corex/api/routes/memory.py (export CSV + metrics)
 - Updated: CORE/corex/api_server.py (export CSV + metrics)
 - Updated: DASHBOARD/index.tsx (CSV export + metrics panel)
+## 2026-02-09 07:05:00
+- Updated: CORE/corex/memory_engine.py (backup + retention)
+- Updated: CORE/corex/api/routes/memory.py (backup/cleanup + CSV)
+- Updated: CORE/corex/api_server.py (backup loop + endpoints + CSV)
+- Updated: DASHBOARD/index.tsx (backup/cleanup buttons)
+## 2026-02-09 07:35:00
+- Installed: Claude Code (claude.exe)
+- Created: APP/claude_shell.ps1
+- Created: APP/claude_hotkey.cmd
+- Created: APP/claude_task.ps1
+## 2026-02-09 08:10:00
+- Added: .claude/settings.json (Claude Code permissions + hooks)
+- Added: .claude/hooks/log_tool.ps1 (PostToolUse logging)
+## 2026-02-09 08:25:00
+- Updated: .claude/settings.json (PreToolUse hook + statusline)
+- Added: .claude/hooks/pre_tool_guard.ps1
+- Added: .claude/hooks/statusline.ps1
+- Added: .mcp.json (MCP servers)
+## 2026-02-09 08:55:00
+- Updated: .claude/hooks/pre_tool_guard.ps1 (balanced guard note)
+- Added: .claude/agents/reviewer.md
+- Added: .claude/agents/frontend.md
+- Added: .claude/agents/security.md
+## 2026-02-09 09:20:00
+- Updated: .claude/settings.json (MCP servers placeholders)
+- Updated: .mcp.json (MCP servers placeholders)
+- Added: CONFIG/mcp.env.example
+## 2026-02-09 09:40:00
+- Updated: CORE/corex/omega/agent_factory.py (memory RAG injection)
+- Added: INBOX/CHECKLIST_CI.md
+- Added: INBOX/CHECKLIST_PR.md
+- Added: APP/generate_report.ps1
+## 2026-02-09 10:05:00
+- Updated: CORE/corex/openai_bridge.py (RAG memory injection)
+- Updated: CORE/corex/api_server.py (latest report endpoint)
+- Updated: DASHBOARD/index.tsx (latest report widget)
+- Added: APP/setup_report_task.ps1 (scheduled reports)
+- Scheduled task: GROTA_REPORT (every 6 hours)
+## 2026-02-09 10:30:00
+- Updated: CORE/corex/memory_engine.py (absolute backup path)
+- Updated: CORE/corex/openai_bridge.py (RAG length limit)
+- Updated: CORE/corex/api_server.py (backup task lifecycle)
+## 2026-02-09 11:10:00
+- Updated: CORE/corex/memory_engine.py (collective memory mirror)
+- Updated: CORE/corex/swarm/smart_router.py (agent routing)
+- Updated: CORE/corex/swarm/engine.py (agent role in response)
+- Updated: CORE/corex/api/routes/execute.py (agent_id + tags)
+- Updated: CORE/corex/api_server.py (agent_id + tags)
+## 2026-02-09 11:35:00
+- Updated: CORE/corex/api/routes/memory.py (collective endpoint)
+- Updated: CORE/corex/api_server.py (collective endpoint)
+- Updated: DASHBOARD/index.tsx (collective toggle)
+- Added: INBOX/TASK_SWARM_E2E.md
+## 2026-02-09 11:55:00
+- Added: INBOX/SYSTEM_CARD_GROTA.md
+- Added: INBOX/TASK_CARD_TEMPLATE.md
+- Added: INBOX/TASK_CARD_GEMINI.md
+- Added: INBOX/TASK_CARD_CLAUDE.md
+- Added: INBOX/TASK_CARD_CODEX.md
+## 2026-02-09 12:10:00
+- Added: INBOX/TASK_TEST_CLEANUP_GEMINI.md

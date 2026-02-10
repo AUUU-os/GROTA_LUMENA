@@ -41,6 +41,16 @@ ROUTING_TABLE: Dict[str, dict] = {
     },
 }
 
+# Agent routing: task_type -> agent role
+AGENT_ROUTING_TABLE: Dict[str, str] = {
+    "code": "codex",
+    "analysis": "gemini",
+    "reasoning": "claude",
+    "creative": "promyk",
+    "chat": "nova",
+    "quick": "promyk",
+}
+
 # Keyword patterns for intent classification
 _INTENT_PATTERNS: List[tuple] = [
     (
@@ -143,6 +153,7 @@ class SmartRouter:
             "temperature": route_config["temperature"],
             "system_prompt": route_config["system_prompt"],
             "task_type": task_type,
+            "agent_role": AGENT_ROUTING_TABLE.get(task_type, "codex"),
         }
 
     def get_available_routes(

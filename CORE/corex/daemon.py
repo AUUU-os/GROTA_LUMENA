@@ -343,9 +343,11 @@ class CoreXDaemon:
                     memory_type="execution_feedback",
                     importance=4,
                     metadata={"source": "daemon", "status": status},
+                    agent_id="core",
                 )
             except Exception as mem_err:
-                logger.error(f"Memory Engine Error: {mem_err}")            logger.info(f"đź§¬ Feedback Loop: Insight indexed for '{command[:20]}...'")
+                logger.error(f"Memory Engine Error: {mem_err}")
+            logger.info(f"?? Feedback Loop: Insight indexed for '{command[:20]}...'")
         except Exception as e:
             logger.error(f"âťŚ Feedback Loop Error: {e}")
 

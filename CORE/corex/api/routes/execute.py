@@ -30,7 +30,8 @@ async def execute_command(request: ExecuteRequest):
             content=f"Command: {sanitized_cmd} | Success: {result.get('success')}",
             memory_type="command",
             importance=5,
-            metadata={"intent": result.get("intent")},
+            metadata={"intent": result.get("intent"), "tags": ["command", "core"]},
+            agent_id="core",
         )
     except Exception:
         pass

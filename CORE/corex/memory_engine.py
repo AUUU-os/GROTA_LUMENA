@@ -24,7 +24,13 @@ class MemoryEngine:
     """
     def __init__(self):
         self.vector_db = vector_memory
-        self.backup_dir = Path("DATABASE/memory_backups")
+        repo_root = os.getenv("LUMEN_REPO_ROOT")
+        if repo_root:
+            base = Path(repo_root)
+        else:
+            # corex/memory_engine.py -> corex -> CORE -> GROTA_LUMENA
+            base = Path(__file__).resolve().parents[3]
+        self.backup_dir = base / "DATABASE" / "memory_backups"
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
     async def load(self):
@@ -42,6 +48,7 @@ class MemoryEngine:
         metadata: Dict[str, Any] = None,
         session_id: Optional[str] = None,
         agent_id: Optional[str] = None,
+        include_collective: bool = True,
     ) -> MemoryEntry:
         """
         Processes and stores a new memory entry.
@@ -80,6 +87,28 @@ class MemoryEngine:
             await session.commit()
             await session.refresh(new_entry)
             logger.info(f"Memory indexed: {embedding_id}")
+            # Optional collective memory mirror
+            if include_collective and agent_id and agent_id != "collective":
+                try:
+                    collective_id = f"{embedding_id}_collective"
+                    await self.vector_db.add_document(
+                        text=content,
+                        doc_id=collective_id,
+                        metadata={"memory_type": safe_type, "importance": importance, "agent_id": "collective", "source_agent": agent_id, **metadata},
+                    )
+                    collective_entry = MemoryEntry(
+                        session_id=session_id,
+                        agent_id="collective",
+                        content=content,
+                        embedding_id=collective_id,
+                        importance=int(importance),
+                        memory_type=safe_type,
+                        meta_data={**json.loads(metadata_str), "source_agent": agent_id},
+                    )
+                    session.add(collective_entry)
+                    await session.commit()
+                except Exception as e:
+                    logger.error(f"Collective memory mirror failed: {e}")
             return new_entry
 
     async def retrieve_memories(

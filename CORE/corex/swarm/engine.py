@@ -85,6 +85,7 @@ class SwarmEngine:
         target_model = route_info["model"]
         system_prompt = route_info.get("system_prompt")
         task_type = route_info.get("task_type", "unknown")
+        agent_role = route_info.get("agent_role", "codex")
 
         # Build prompt
         prompt_parts = []
@@ -137,7 +138,7 @@ class SwarmEngine:
         self._queue_size = max(0, self._queue_size - 1)
 
         response = AgentResponse(
-            agent_name="Local_Ollama_Worker",
+            agent_name=agent_role,
             model_used=target_model,
             content=content,
             execution_time=round(exec_time, 3),
@@ -145,6 +146,7 @@ class SwarmEngine:
                 "raw_duration": duration,
                 "task_type": task_type,
                 "routed_by": "smart_router" if not task.model_preference else "manual",
+                "agent_role": agent_role,
                 "priority": task.priority.name,
                 "retries_used": retries_used,
                 "success": success,

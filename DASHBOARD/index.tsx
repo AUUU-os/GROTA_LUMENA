@@ -79,7 +79,7 @@ import {
 
 // --- Types ---
 
-type ViewMode = "chat" | "image" | "video" | "live" | "tasks" | "repo" | "models" | "grota" | "evolution" | "memory";
+type ViewMode = "chat" | "image" | "video" | "live" | "tasks" | "repo" | "models" | "grota" | "evolution" | "docs_chat" | "memory" | "analytics" | "tools";
 
 interface ChatMessage { 
   id: string;
@@ -773,6 +773,34 @@ const TaskView = () => {
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const newTaskInputRef = useRef<HTMLInputElement>(null);
+    const syncWithGrotto = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/tasks/user");
+        const grottoTasks = await res.json();
+        setTasks(grottoTasks.map((t: any) => ({
+          ...t,
+          subtasks: t.subtasks || [],
+          isExpanded: true,
+          dependencies: t.dependencies || [],
+          recurring: t.recurring || "none",
+          tags: t.tags || []
+        })));
+      } catch (err) { console.error("Sync failed", err); }
+    };
+
+    const brainstormTasks = async () => {
+      if (!newTaskText.trim()) return;
+      try {
+        await fetch("http://localhost:8000/tasks/user/brainstorm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: newTaskText })
+        });
+        await syncWithGrotto();
+        setNewTaskText("");
+      } catch (err) { console.error("Brainstorm failed", err); }
+    };
+
 
   useEffect(() => {
     const saved = localStorage.getItem("studio_tasks");
@@ -1921,6 +1949,8 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
   const searchPageSize = 8;
   const [tagFilter, setTagFilter] = useState("all");
   const [metrics, setMetrics] = useState<{by_agent: Record<string, number>; by_type: Record<string, number>; by_tag: Record<string, number>} | null>(null);
+  const [latestReport, setLatestReport] = useState<{file: string; content: string} | null>(null);
+  const [collectiveOnly, setCollectiveOnly] = useState(false);
   const agentBadgeClass = (agent?: string) => {
     switch (agent) {
       case "dashboard": return "bg-blue-500/20 text-blue-300 border-blue-500/30";
@@ -1940,11 +1970,14 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
         limit: String(pageSize),
         offset: String(offset),
       });
-      if (agentFilter.trim()) params.set("agent_id", agentFilter.trim());
-      if (sessionFilter.trim()) params.set("session_id", sessionFilter.trim());
-      const res = await fetch(
-        `http://localhost:8000/api/v1/memory/recent?${params.toString()}`
-      );
+      if (!collectiveOnly) {
+        if (agentFilter.trim()) params.set("agent_id", agentFilter.trim());
+        if (sessionFilter.trim()) params.set("session_id", sessionFilter.trim());
+      }
+      const endpoint = collectiveOnly
+        ? `http://localhost:8000/api/v1/memory/collective?${params.toString()}`
+        : `http://localhost:8000/api/v1/memory/recent?${params.toString()}`;
+      const res = await fetch(endpoint);
       const data = await res.json();
       setResults(data.results || []);
       setPage(pageIndex);
@@ -1973,6 +2006,17 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
       setMetrics(data.success ? data : null);
     } catch (e: any) {
       addLog({ message: `Memory metrics failed: ${e.message}`, type: "warning", source: "Memory" });
+    }
+  };
+  const loadLatestReport = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/reports/latest");
+      const data = await res.json();
+      if (data.success) {
+        setLatestReport({ file: data.file, content: data.content });
+      }
+    } catch (e: any) {
+      addLog({ message: `Latest report failed: ${e.message}`, type: "warning", source: "Reports" });
     }
   };
 
@@ -2007,6 +2051,7 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
     loadRecent();
     loadStats();
     loadMetrics();
+    loadLatestReport();
   }, []);
 
   const filteredResults = results.filter((r) => {
@@ -2090,6 +2135,34 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
             Export CSV
           </button>
           <button
+            onClick={async () => {
+              try {
+                const res = await fetch("http://localhost:8000/api/v1/memory/backup/run", { method: "POST" });
+                const data = await res.json();
+                addLog({ message: `Backup saved: ${data.path}`, type: "success", source: "Memory" });
+              } catch (e: any) {
+                addLog({ message: `Backup failed: ${e.message}`, type: "error", source: "Memory" });
+              }
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-400/10 text-purple-300 border border-purple-400/20 hover:bg-purple-400/20 transition"
+          >
+            Backup Now
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch("http://localhost:8000/api/v1/memory/backup/cleanup", { method: "POST" });
+                const data = await res.json();
+                addLog({ message: `Backups cleaned: ${data.removed}`, type: "success", source: "Memory" });
+              } catch (e: any) {
+                addLog({ message: `Cleanup failed: ${e.message}`, type: "error", source: "Memory" });
+              }
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-400/10 text-zinc-300 border border-white/10 hover:bg-white/10 transition"
+          >
+            Cleanup
+          </button>
+          <button
             onClick={() => search(0)}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-400/10 text-cyan-300 border border-cyan-400/20 hover:bg-cyan-400/20 transition"
           >
@@ -2127,6 +2200,18 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
             className="px-3 py-2 rounded-xl text-[10px] font-bold bg-white/5 text-zinc-400 border border-white/10 hover:bg-white/10 transition"
           >
             Clear Filters
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+          <span>Collective Memory</span>
+          <button
+            onClick={() => { setCollectiveOnly(!collectiveOnly); loadRecent(0); }}
+            className={`px-3 py-1.5 rounded-full border transition ${
+              collectiveOnly ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" : "bg-white/5 text-zinc-500 border-white/10"
+            }`}
+          >
+            {collectiveOnly ? "ON" : "OFF"}
           </button>
         </div>
 
@@ -2236,6 +2321,24 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
           </div>
         )}
 
+        {latestReport && (
+          <div className="glass p-5 rounded-[24px] border border-white/10">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[10px] uppercase text-zinc-500 font-bold">Latest Report</div>
+              <button
+                onClick={loadLatestReport}
+                className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-white/5 text-zinc-400 border border-white/10 hover:bg-white/10 transition"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="text-xs text-zinc-400 mb-2">{latestReport.file}</div>
+            <pre className="text-[10px] text-zinc-300 whitespace-pre-wrap max-h-64 overflow-y-auto custom-scrollbar">
+{latestReport.content}
+            </pre>
+          </div>
+        )}
+
         <div className="space-y-4">
           {loading && (
             <div className="flex items-center gap-2 text-zinc-400"><Loader2 className="animate-spin" /> Loading...</div>
@@ -2292,6 +2395,296 @@ const MemoryView = ({ addLog }: { addLog: (log: Omit<LogEntry, 'id' | 'timestamp
   );
 };
 
+
+const TaskStatusBar = () => {
+  const [tasks, setTasks] = React.useState<any>({});
+
+  React.useEffect(() => {
+    const fetchTasks = () => {
+      fetch("http://localhost:8000/tasks/status")
+        .then(res => res.json())
+        .then(data => setTasks(data))
+        .catch(() => {});
+    };
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const taskList = Object.entries(tasks);
+  if (taskList.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 items-end">
+      {taskList.map(([name, data]: [string, any]) => (
+        <div key={name} className="glass px-4 py-2 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 animate-fade-in">
+          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
+          <div className="flex flex-col">
+            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">{name}</div>
+            <div className="text-xs text-zinc-200 font-medium">{data.status}</div>
+          </div>
+          <div className="text-[9px] text-zinc-600 ml-2">{data.last_update}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
+const VoiceController = ({ onTranscribe }: { onTranscribe: (text: string) => void }) => {
+  const [isRecording, setIsRecording] = React.useState(false);
+  const mediaRecorder = React.useRef<MediaRecorder | null>(null);
+  const audioChunks = React.useRef<Blob[]>([]);
+
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder.current = new MediaRecorder(stream);
+    audioChunks.current = [];
+
+    mediaRecorder.current.ondataavailable = (event) => {
+      audioChunks.current.push(event.data);
+    };
+
+    mediaRecorder.current.onstop = async () => {
+      const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
+      const formData = new FormData();
+      formData.append("file", audioBlob, "audio.wav");
+
+      try {
+        const res = await fetch("http://localhost:8000/voice/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.text) onTranscribe(data.text);
+      } catch (err) {
+        console.error("Transcription failed", err);
+      }
+    };
+
+    mediaRecorder.current.start();
+    setIsRecording(true);
+  };
+
+  const stopRecording = () => {
+    mediaRecorder.current?.stop();
+    setIsRecording(false);
+  };
+
+  return (
+    <button
+      onMouseDown={startRecording}
+      onMouseUp={stopRecording}
+      className={`p-4 rounded-full transition-all shadow-2xl ${isRecording ? "bg-red-500 scale-110 animate-pulse" : "bg-orange-500 hover:bg-orange-600"}`}
+      title="Hold to speak to Wataha"
+    >
+      <Mic className="w-6 h-6 text-white" />
+    </button>
+  );
+};
+
+
+const AnalyticsView = () => {
+  const [stats, setStats] = React.useState<any>(null);
+  React.useEffect(() => {
+    fetch("http://localhost:8000/stats").then(r => r.json()).then(setStats);
+  }, []);
+
+  if (!stats) return <div className="p-8 text-zinc-500">Calculating metrics...</div>;
+
+  return (
+    <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="glass p-6 rounded-3xl border border-white/5">
+          <div className="text-zinc-500 text-xs font-bold uppercase mb-1">Total Memories</div>
+          <div className="text-4xl font-bold text-white">{stats.memories}</div>
+        </div>
+        <div className="glass p-6 rounded-3xl border border-white/5">
+          <div className="text-zinc-500 text-xs font-bold uppercase mb-1">Avg Resonance</div>
+          <div className="text-4xl font-bold text-orange-500">{stats.resonance_avg}%</div>
+        </div>
+        <div className="glass p-6 rounded-3xl border border-white/5">
+          <div className="text-zinc-500 text-xs font-bold uppercase mb-1">System Health</div>
+          <div className="text-4xl font-bold text-emerald-500">Optimal</div>
+        </div>
+        <div className="glass p-6 rounded-3xl border border-white/5">
+          <div className="text-zinc-500 text-xs font-bold uppercase mb-1">Active Agents</div>
+          <div className="text-4xl font-bold text-indigo-500">5</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="glass p-8 rounded-[32px] border border-white/5">
+          <h3 className="text-xl font-bold mb-6">Memory Growth</h3>
+          <div className="flex items-end gap-2 h-48">
+            {stats.daily_growth.map((d: any) => (
+              <div key={d.date} className="flex-1 flex flex-col items-center gap-2 group">
+                <div className="w-full bg-orange-500/20 rounded-t-lg transition-all group-hover:bg-orange-500/40" style={{ height: `${(d.value / 200) * 100}%` }}></div>
+                <div className="text-[10px] text-zinc-600 -rotate-45 mt-2">{d.date.split('-').slice(1).join('/')}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="glass p-8 rounded-[32px] border border-white/5">
+          <h3 className="text-xl font-bold mb-6">Categories</h3>
+          <div className="space-y-4">
+            {Object.entries(stats.categories).map(([name, val]: [string, any]) => (
+              <div key={name} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">{name}</span>
+                  <span className="text-white font-bold">{val}%</span>
+                </div>
+                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-indigo-500 h-full" style={{ width: `${val}%` }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ToolsView = () => {
+  const [url, setUrl] = React.useState("");
+  const [result, setResult] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const handleRead = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/tools/read-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: url })
+      });
+      const data = await res.json();
+      setResult(data);
+    } catch (e) {
+      alert("Error reading link");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex-1 p-8 overflow-y-auto">
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div className="glass p-8 rounded-[32px] border border-white/5 space-y-4">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            <Zap className="text-orange-500" /> Nexus Link Reader
+          </h2>
+          <p className="text-zinc-500 text-sm">Drop a YouTube or TikTok link to extract knowledge directly into the Grotto.</p>
+          <div className="flex gap-2">
+            <input 
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="flex-1 bg-zinc-900/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/50 transition-colors"
+            />
+            <button 
+              onClick={handleRead}
+              disabled={loading}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <Search className="w-4 h-4" />} Analyze
+            </button>
+          </div>
+        </div>
+
+        {result && (
+          <div className="glass p-8 rounded-[32px] border border-white/10 animate-fade-in space-y-6">
+            <div className="flex gap-6">
+              {result.thumbnail && <img src={result.thumbnail} className="w-32 h-32 rounded-2xl object-cover shadow-2xl border border-white/10" />}
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">{result.title}</h3>
+                <div className="text-orange-500 font-bold text-sm">{result.author}</div>
+                <div className="flex gap-4 text-zinc-500 text-xs">
+                  <span>Duration: {Math.floor(result.duration / 60)}m {result.duration % 60}s</span>
+                  <span>Views: {result.view_count?.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-white/5 rounded-2xl text-sm text-zinc-400 italic">
+              {result.description}
+            </div>
+            <div className="text-[10px] text-zinc-600 uppercase font-bold">Status: Knowledge Ingested to ChromaDB</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const DocChatView = () => {
+  const [query, setQuery] = React.useState("");
+  const [response, setResponse] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const handleChat = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/docs/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, n_results: 5 })
+      });
+      const data = await res.json();
+      setResponse(data);
+    } catch (e) { alert("Chronicle silent. Check API."); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex-1 p-8 overflow-y-auto">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="glass p-8 rounded-[32px] border border-white/5 space-y-4">
+          <h2 className="text-2xl font-bold flex items-center gap-3 text-indigo-400">
+            <FileJson className="w-8 h-8" /> CHRONICLE CHAT
+          </h2>
+          <p className="text-zinc-500 text-sm">Ask questions based only on your Grotto's z zindeksowanymi dokumentami.</p>
+          <div className="flex gap-2">
+            <input 
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ask the ancestors..."
+              className="flex-1 bg-zinc-900/50 border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
+            />
+            <button 
+              onClick={handleChat}
+              disabled={loading}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {response && (
+          <div className="glass p-8 rounded-[32px] border border-white/10 animate-fade-in space-y-6">
+            <div className="flex justify-between items-center">
+              <div className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Wataha Response</div>
+              <div className="text-[10px] font-bold text-zinc-600">RESONANCE: {response.resonance}%</div>
+            </div>
+            <div className="text-lg text-zinc-200 leading-relaxed italic">
+              {response.answer}
+            </div>
+            <div className="pt-4 border-t border-white/5">
+              <div className="text-[10px] font-bold text-zinc-500 mb-2">SOURCES:</div>
+              <div className="flex flex-wrap gap-2">
+                {response.sources.map((s: any, i: number) => (
+                  <span key={i} className="px-2 py-1 bg-white/5 rounded-md text-[9px] text-zinc-400">
+                    {s.title} ({s.source})
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 const App = () => {
   const [view, setView] = useState<ViewMode>("chat");
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -2334,11 +2727,11 @@ const App = () => {
           <NavItem m="memory" icon={Brain} label="Memory Vault" />
           <NavItem m="tasks" icon={CheckSquare} label="Task Manager" />
           <NavItem m="grota" icon={Mountain} label="Grota Dashboard" />
-          <NavItem m="evolution" icon={Brain} label="Evolution Tree" />
+          <NavItem m="evolution" | "docs_chat" icon={Brain} label="Evolution Tree" />
         </nav>
       </aside>
       <main className="flex-1 flex flex-col p-6 overflow-hidden relative z-10">
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between mb-8"><VoiceController onTranscribe={(text) => speakText("Usłyszałem: " + text)} />
            <div className="animate-fade-in"><h2 className="text-3xl font-bold tracking-tight text-white capitalize">{view}</h2></div>
            <div className="flex items-center gap-3">
               <button onClick={() => setShowTerminal(!showTerminal)} className={`glass w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${showTerminal ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
@@ -2357,9 +2750,13 @@ const App = () => {
           {view === "video" && <div className="h-full glass rounded-[32px] p-8 flex flex-col items-center justify-center border border-white/5"><Video className="w-16 h-16 mb-4 opacity-20" /><h3 className="text-xl font-bold text-zinc-400">Wolf Vision (Veo)</h3></div>}
           {view === "live" && <div className="h-full glass rounded-[32px] p-8 flex flex-col items-center justify-center border border-white/5"><Mic className="w-16 h-16 mb-4 opacity-20" /><h3 className="text-xl font-bold text-zinc-400">Native Audio</h3></div>}
           {view === "grota" && <GrotaView addLog={addLog} />}
-          {view === "evolution" && <EvolutionView />}
+
+          {view === "analytics" && <AnalyticsView />}
+          {view === "tools" && <ToolsView />}
+          {view === "evolution" | "docs_chat" && <EvolutionView />}
           <TerminalLog logs={logs} isOpen={showTerminal} onClose={() => setShowTerminal(false)} onClear={() => setLogs([])} />
         </section>
+        <TaskStatusBar />
       </main>
     </div>
   );

@@ -10,6 +10,7 @@ import logging
 from typing import List, Dict, Any
 from openai import AsyncOpenAI
 from corex.config import settings
+from corex.memory_engine import memory_engine
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,26 @@ class OpenAIBridge:
             return "OpenAI API Key not configured. Please check your .env file."
 
         messages = history or []
+        # Inject memory context (RAG)
+        try:
+            mem = await memory_engine.retrieve_memories(
+                query=message, limit=5, strategy="hybrid"
+            )
+            mem_lines = [m.get("content", "") for m in mem if m.get("content")]
+            if mem_lines:
+                # Hard limit to prevent prompt bloat
+                joined = "\n- ".join(mem_lines)
+                if len(joined) > 1500:
+                    joined = joined[:1500] + "..."
+                messages.insert(
+                    0,
+                    {
+                        "role": "system",
+                        "content": "Memory context:\n- " + joined,
+                    },
+                )
+        except Exception:
+            pass
         messages.append({"role": "user", "content": message})
 
         # Define tools (Function Calling)

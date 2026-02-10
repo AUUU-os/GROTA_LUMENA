@@ -10,6 +10,7 @@ import time
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any
+import os
 
 import uvicorn
 from fastapi import FastAPI, Depends, Request, BackgroundTasks
@@ -35,6 +36,7 @@ from corex.health import health_checker
 from fastapi.responses import StreamingResponse
 import csv
 import io
+from pathlib import Path
 from corex.memory_engine import memory_engine
 
 # --- INITIALIZATION ---
@@ -117,6 +119,9 @@ app = FastAPI(
     title="LUMEN CORE", version="19.0.0", default_response_class=ORJSONResponse
 )
 
+# Background task handles
+_memory_backup_task: Optional[asyncio.Task] = None
+
 # Middleware Chain
 app.add_middleware(SecurityMiddleware)
 app.add_middleware(
@@ -162,12 +167,31 @@ async def startup_event():
     # Warm up Resonance Engine
     resonance_engine.calculate_current_resonance(963.0)
 
+    # Start periodic memory backups
+    async def _memory_backup_loop():
+        interval = int(os.getenv("LUMEN_MEMORY_BACKUP_INTERVAL_SEC", "21600"))
+        keep_days = int(os.getenv("LUMEN_MEMORY_BACKUP_KEEP_DAYS", "7"))
+        while True:
+            try:
+                await memory_engine.backup_to_file(keep_days=keep_days)
+                logger.info("Memory backup completed.")
+            except Exception as e:
+                logger.error(f"Memory backup failed: {e}")
+            await asyncio.sleep(interval)
+
+    global _memory_backup_task
+    _memory_backup_task = asyncio.create_task(_memory_backup_loop())
+
     logger.info("System Operational. Chronicle is active.")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("LUMEN CORE shutting down gracefully...")
+    global _memory_backup_task
+    if _memory_backup_task:
+        _memory_backup_task.cancel()
+        _memory_backup_task = None
     # Allow pending tasks to complete
     await asyncio.sleep(0.5)
     logger.info("Shutdown complete.")
@@ -225,9 +249,9 @@ async def execute(
                 content=f"Command: {request.command} | Exec: True",
                 memory_type="command",
                 importance=5,
-                metadata={"mode": "exec"},
+                metadata={"mode": "exec", "tags": ["command", "core"]},
                 session_id=session_id,
-                agent_id="system",
+                agent_id="core",
             )
         except Exception:
             pass
@@ -239,9 +263,9 @@ async def execute(
             content=f"Command: {request.command} | Exec: False",
             memory_type="command",
             importance=4,
-            metadata={"mode": request.mode},
+            metadata={"mode": request.mode, "tags": ["command", "core"]},
             session_id=session_id,
-            agent_id="shad",
+            agent_id="core",
         )
     except Exception:
         pass
@@ -346,6 +370,18 @@ async def memory_recent(limit: int = 10, offset: int = 0, agent_id: str = None, 
     return {"success": True, "results": results}
 
 
+@app.get("/api/v1/memory/collective")
+async def memory_collective(limit: int = 10, offset: int = 0):
+    results = await memory_engine.retrieve_memories(
+        query="",
+        limit=limit,
+        strategy="temporal",
+        offset=offset,
+        agent_id="collective",
+    )
+    return {"success": True, "results": results}
+
+
 @app.get("/api/v1/memory/stats")
 async def memory_stats():
     return {"success": True, "stats": memory_engine.vector_db.get_stats()}
@@ -368,6 +404,17 @@ async def memory_metrics():
             for t in tags:
                 by_tag[t] = by_tag.get(t, 0) + 1
     return {"success": True, "by_agent": by_agent, "by_type": by_type, "by_tag": by_tag}
+
+
+@app.get("/api/v1/reports/latest")
+async def latest_report():
+    inbox = Path("INBOX")
+    reports = sorted(inbox.glob("REPORT_*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not reports:
+        return {"success": False, "message": "No reports found"}
+    latest = reports[0]
+    content = latest.read_text(encoding="utf-8", errors="ignore")
+    return {"success": True, "file": latest.name, "content": content}
 
 
 @app.get("/api/v1/memory/export")
@@ -425,6 +472,18 @@ async def memory_export_csv(limit: int = 1000, offset: int = 0, agent_id: str = 
         ])
     buffer.seek(0)
     return StreamingResponse(iter([buffer.getvalue()]), media_type="text/csv")
+
+
+@app.post("/api/v1/memory/backup/run")
+async def memory_backup_run(keep_days: int = 7):
+    path = await memory_engine.backup_to_file(keep_days=keep_days)
+    return {"success": True, "path": path}
+
+
+@app.post("/api/v1/memory/backup/cleanup")
+async def memory_backup_cleanup(keep_days: int = 7):
+    removed = memory_engine.cleanup_backups(keep_days=keep_days)
+    return {"success": True, "removed": removed}
 
 
 if __name__ == "__main__":

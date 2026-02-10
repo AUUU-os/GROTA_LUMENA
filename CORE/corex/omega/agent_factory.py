@@ -10,7 +10,9 @@ sys.path.append(repo_path)
 
 from agents import Agent, Runner
 from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
+import asyncio
 from corex.prompt_engine import prompt_builder
+from corex.memory_engine import memory_engine
 from corex.openclaw_bridge import openclaw_bridge
 
 class LumenAgentFactory:
@@ -21,6 +23,21 @@ class LumenAgentFactory:
         
         # 1. Build System Prompt using existing Prompt Engine
         prompt_builder.set_identity(persona)
+        # Inject memory context (recent + relevant)
+        try:
+            agent_id = name.lower()
+            mem = asyncio.run(
+                memory_engine.retrieve_memories(
+                    query=f"context for {persona}",
+                    limit=5,
+                    strategy="hybrid",
+                    agent_id=agent_id,
+                )
+            )
+            mem_lines = [m.get("content", "") for m in mem if m.get("content")]
+            prompt_builder.set_context(memory_data=mem_lines)
+        except Exception:
+            prompt_builder.set_context(memory_data=None)
         system_instructions = prompt_builder.build()
         
         # 2. Add OMEGA constraints
