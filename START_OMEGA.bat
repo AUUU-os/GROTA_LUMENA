@@ -2,6 +2,7 @@
 setlocal
 echo ?? LUMEN OMEGA - INITIALIZING FROM GROTTO...
 cd /d E:\SHAD\GROTA_LUMENA
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\\APP\\bootloader.ps1"
 
 :: Check Python
 python --version >nul 2>&1

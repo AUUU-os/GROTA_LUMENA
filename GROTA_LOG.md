@@ -122,3 +122,7 @@
 - Added: INBOX/TASK_CARD_CODEX.md
 ## 2026-02-09 12:10:00
 - Added: INBOX/TASK_TEST_CLEANUP_GEMINI.md
+## 2026-02-09 12:30:00
+- Added: APP/bootloader.ps1
+- Updated: START_OMEGA.bat (bootloader banner)
+[2026-02-10 22:42] ROADMAP NOW updated (priorities/owners/ETA). New tasks created: TASK_AUTH_SECURITY_REVIEW.md, TASK_SWARM_STARTUP.md, TASK_PROJECT_INDEX.md.

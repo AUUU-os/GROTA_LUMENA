@@ -19,45 +19,18 @@ logger = logging.getLogger("builder.dispatcher")
 
 # Intent classification patterns (from smart_router.py, extended for Builder)
 _INTENT_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("code_complex", re.compile(
-        r"\b(refactor|security|audit|complex|architect|critical|bug.*fix|deep.*review)\b", re.I
-    )),
-    ("code_feature", re.compile(
-        r"\b(feature|endpoint.*logic.*test|full.*implementation|A.*to.*Z|from.*scratch)\b", re.I
-    )),
-    ("code_simple", re.compile(
-        r"\b(code|implement|function|class|script|debug|fix|program|write.*code|python|javascript|html|css|sql|api)\b", re.I
-    )),
-    ("architecture", re.compile(
-        r"\b(architect|design|structure|system.*design|plan|blueprint|schema)\b", re.I
-    )),
-    ("review", re.compile(
-        r"\b(review|check|verify|validate|inspect|assess)\b", re.I
-    )),
-    ("reasoning", re.compile(
-        r"\b(why|explain|reason|logic|proof|think.*step|math|calculate|solve)\b", re.I
-    )),
-    ("docs", re.compile(
-        r"\b(doc|documentation|readme|comment|describe|write.*doc)\b", re.I
-    )),
-    ("test", re.compile(
-        r"\b(test|unittest|pytest|coverage|spec|assert)\b", re.I
-    )),
-    ("quick", re.compile(
-        r"\b(yes or no|true or false|translate|define|what is|short|tldr|quick)\b", re.I
-    )),
-    # === SZTAB AGENTÓW ===
+    # === SZTAB AGENTÓW (specific domains — checked first) ===
     ("security_audit", re.compile(
-        r"\b(security.*audit|vulnerability|sandbox|OWASP|injection|XSS|CSRF|penetration|exploit|CVE)\b", re.I
+        r"\b(security.*audit|vulnerability|sandbox|OWASP|injection|XSS|CSRF|penetration|exploit|CVE|input.?validation|security.?review)\b", re.I
     )),
     ("performance", re.compile(
         r"\b(performance|latency|throughput|cache.*strateg|profil|bottleneck|optimi.*speed|observability|metric.*track)\b", re.I
     )),
     ("ux_design", re.compile(
-        r"\b(UX|user.*experience|frontend.*design|interface|accessibility|responsive|multi.*modal.*UI)\b", re.I
+        r"\b(UX|user.*experience|frontend.*design|frontend.*UI|interface.*design|accessibility|responsive.*design|multi.*modal.*UI|React.*dashboard|redesign.*UI)\b", re.I
     )),
     ("quality_assurance", re.compile(
-        r"\b(QA|quality.*assurance|regression.*test|e2e.*test|test.*plan|coverage.*target|CI.*CD.*pipeline)\b", re.I
+        r"\b(QA|quality.*assurance|regression.*test|e2e.*test|test.*plan|coverage.*target|CI.*CD.*pipeline|test.*strateg)\b", re.I
     )),
     ("knowledge_rag", re.compile(
         r"\b(RAG|retrieval.*augment|embedding|vector.*store|ChromaDB|semantic.*search|knowledge.*base)\b", re.I
@@ -66,10 +39,38 @@ _INTENT_PATTERNS: list[tuple[str, re.Pattern]] = [
         r"\b(tool.*registry|workflow.*engine|DAG|pipeline.*build|dynamic.*tool|automat.*chain)\b", re.I
     )),
     ("documentation", re.compile(
-        r"\b(documentation.*system|prompt.*version|changelog.*maintain|API.*doc|voice.*integrat)\b", re.I
+        r"\b(documentation.*system|prompt.*version|changelog.*maintain|API.*doc|voice.*integrat|write.*documentation)\b", re.I
     )),
     ("debate", re.compile(
         r"\b(debate|debata|multi.*agent.*discuss|sztab|consensus|panel.*dyskus)\b", re.I
+    )),
+    # === GENERAL (broader patterns — checked after specific) ===
+    ("code_complex", re.compile(
+        r"\b(refactor|complex|critical|bug.*fix|deep.*review)\b", re.I
+    )),
+    ("code_feature", re.compile(
+        r"\b(feature|endpoint.*logic.*test|full.*implementation|A.*to.*Z|from.*scratch)\b", re.I
+    )),
+    ("code_simple", re.compile(
+        r"\b(code|implement|function|class|script|debug|fix|program|write.*code|python|javascript|html|css|sql)\b", re.I
+    )),
+    ("architecture", re.compile(
+        r"\b(architect|system.*design|blueprint|schema)\b", re.I
+    )),
+    ("review", re.compile(
+        r"\b(review|check|verify|validate|inspect|assess)\b", re.I
+    )),
+    ("reasoning", re.compile(
+        r"\b(why|explain|reason|logic|proof|think.*step|math|calculate|solve)\b", re.I
+    )),
+    ("docs", re.compile(
+        r"\b(readme|comment|describe|write.*doc)\b", re.I
+    )),
+    ("test", re.compile(
+        r"\b(test|unittest|pytest|coverage|spec|assert)\b", re.I
+    )),
+    ("quick", re.compile(
+        r"\b(yes or no|true or false|translate|define|what is|short|tldr|quick)\b", re.I
     )),
 ]
 

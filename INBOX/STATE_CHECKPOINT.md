@@ -1,24 +1,16 @@
-﻿# STATE CHECKPOINT
-## Timestamp: 2026-02-09 05:20:00
+# GROTA_LUMENA Checkpoint
+Time: 2026-02-10 21:22:00
+Snapshot: SZTAB LIVE — 7 agents + debate engine verified
 
-## Summary
-- Memory module fully integrated (API + daemon + dashboard).
-- Auto memory writes on /execute (CORE API + api_server).
-- Memory Vault UI: filters + pagination + chat auto-save.
-- MCP Docs configured (openaiDeveloperDocs).
-- Apps 403 in Codex CLI traced to Cloudflare/web-only Apps.
+## Status
+- Builder: v0.4.0
+- Agents: 11 (4 core + 7 sztab)
+- Routes: 17
+- Debate engine: TESTED (mini-debata 2 agentow OK)
+- Dispatcher: pattern priority fix applied
+- Ollama: ONLINE (9 modeli)
 
-## Key Files Updated
-- CORE/corex/memory_engine.py
-- CORE/corex/api/routes/memory.py
-- CORE/corex/api/models.py
-- CORE/corex/api/main.py
-- CORE/corex/api_server.py
-- CORE/corex/api/routes/execute.py
-- CORE/corex/daemon.py
-- DASHBOARD/index.tsx
-- AGENTS.md
-
-## Notes
-- Memory entries stored in SQL + ChromaDB.
-- Dashboard Memory Vault supports filters and paging.
+## Last action
+- Dispatcher intent patterns reordered (sztab-specific before general)
+- Mini-debata executed: STROZ_SECURITY + TESTER_QA on security topic
+- Report saved: artifacts/DEBATE_2026_02_10_2119.md
