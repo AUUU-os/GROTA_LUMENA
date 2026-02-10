@@ -19,9 +19,14 @@ _CAPABILITY_PATTERNS = {
     "code": re.compile(r"\b(code|program|implement|build|engineer|daemon|interpreter)\b", re.I),
     "review": re.compile(r"\b(review|audit|security|quality)\b", re.I),
     "architecture": re.compile(r"\b(architect|structure|design|system)\b", re.I),
-    "docs": re.compile(r"\b(doc|documentation|write|manifest)\b", re.I),
-    "test": re.compile(r"\b(test|coverage|qa)\b", re.I),
+    "docs": re.compile(r"\b(doc|documentation|write|manifest|changelog|prompt.*version)\b", re.I),
+    "test": re.compile(r"\b(test|coverage|qa|regression|e2e|CI.?CD)\b", re.I),
     "reasoning": re.compile(r"\b(reason|think|analy|logic)\b", re.I),
+    "security": re.compile(r"\b(security|sandbox|audit|validation|OWASP|injection|penetration)\b", re.I),
+    "performance": re.compile(r"\b(performance|cache|latency|throughput|profil|optimi|metric|observ)\b", re.I),
+    "ux": re.compile(r"\b(UX|frontend|interface|accessibility|multi.?modal|React|UI)\b", re.I),
+    "rag": re.compile(r"\b(RAG|embedding|vector|ChromaDB|retrieval|semantic.*search|knowledge)\b", re.I),
+    "tools": re.compile(r"\b(tool|workflow|DAG|pipeline|automat|registry|forge)\b", re.I),
 }
 
 # Bridge type mapping
@@ -30,6 +35,14 @@ _BRIDGE_MAP = {
     "GEMINI_ARCHITECT": "gemini",
     "CODEX": "codex",
     "SHAD": "human",
+    # Sztab agentów (all via Ollama)
+    "STROZ_SECURITY": "ollama",
+    "INZYNIER_PERF": "ollama",
+    "ARCHITEKT_UX": "ollama",
+    "TESTER_QA": "ollama",
+    "NAVIGATOR_RAG": "ollama",
+    "KOWAL_TOOLS": "ollama",
+    "KRONIKARZ_DOCS": "ollama",
 }
 
 
@@ -137,7 +150,7 @@ class AgentRegistry:
         """Extract role from WHO_AM_I.md header or first line."""
         lines = text.strip().split("\n")
         for line in lines[:5]:
-            if "##" in line and any(w in line.lower() for w in ["the ", "architect", "engineer", "builder", "source", "mirror"]):
+            if "##" in line and any(w in line.lower() for w in ["the ", "architect", "engineer", "builder", "source", "mirror", "officer", "commander", "navigator", "master", "chronicler", "forge"]):
                 return line.strip("# ").strip()
         return "agent"
 

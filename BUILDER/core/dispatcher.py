@@ -46,6 +46,31 @@ _INTENT_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("quick", re.compile(
         r"\b(yes or no|true or false|translate|define|what is|short|tldr|quick)\b", re.I
     )),
+    # === SZTAB AGENTÓW ===
+    ("security_audit", re.compile(
+        r"\b(security.*audit|vulnerability|sandbox|OWASP|injection|XSS|CSRF|penetration|exploit|CVE)\b", re.I
+    )),
+    ("performance", re.compile(
+        r"\b(performance|latency|throughput|cache.*strateg|profil|bottleneck|optimi.*speed|observability|metric.*track)\b", re.I
+    )),
+    ("ux_design", re.compile(
+        r"\b(UX|user.*experience|frontend.*design|interface|accessibility|responsive|multi.*modal.*UI)\b", re.I
+    )),
+    ("quality_assurance", re.compile(
+        r"\b(QA|quality.*assurance|regression.*test|e2e.*test|test.*plan|coverage.*target|CI.*CD.*pipeline)\b", re.I
+    )),
+    ("knowledge_rag", re.compile(
+        r"\b(RAG|retrieval.*augment|embedding|vector.*store|ChromaDB|semantic.*search|knowledge.*base)\b", re.I
+    )),
+    ("tools_workflow", re.compile(
+        r"\b(tool.*registry|workflow.*engine|DAG|pipeline.*build|dynamic.*tool|automat.*chain)\b", re.I
+    )),
+    ("documentation", re.compile(
+        r"\b(documentation.*system|prompt.*version|changelog.*maintain|API.*doc|voice.*integrat)\b", re.I
+    )),
+    ("debate", re.compile(
+        r"\b(debate|debata|multi.*agent.*discuss|sztab|consensus|panel.*dyskus)\b", re.I
+    )),
 ]
 
 FALLBACK_TYPE = "code_simple"
@@ -94,7 +119,9 @@ class Dispatcher:
             "You are a task classifier. Given a task title and description, "
             "respond with EXACTLY ONE of the following types and nothing else:\n"
             "code_complex, code_simple, code_feature, architecture, review, "
-            "reasoning, docs, test, quick\n\n"
+            "reasoning, docs, test, quick, security_audit, performance, "
+            "ux_design, quality_assurance, knowledge_rag, tools_workflow, "
+            "documentation, debate\n\n"
             f"Title: {task.title}\n"
             f"Description: {task.description}\n\n"
             "Type:"
@@ -102,7 +129,7 @@ class Dispatcher:
 
         url = f"{OLLAMA_URL}/api/generate"
         payload = {
-            "model": "llama3.2:latest",
+            "model": "phi4-mini",
             "prompt": prompt,
             "stream": False,
         }

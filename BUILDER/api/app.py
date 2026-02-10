@@ -197,10 +197,12 @@ def create_app() -> FastAPI:
     from BUILDER.api.routes import agents as agents_routes
     from BUILDER.api.routes import system as system_routes
     from BUILDER.api.routes import ws as ws_routes
+    from BUILDER.api.routes import debate as debate_routes
 
     app.include_router(tasks_routes.router, prefix="/api/v1")
     app.include_router(agents_routes.router, prefix="/api/v1")
     app.include_router(system_routes.router, prefix="/api/v1")
     app.include_router(ws_routes.router)
+    app.include_router(debate_routes.router, prefix="/api/v1")
 
     return app
