@@ -1,5 +1,5 @@
-"""
-LUMEN Agent Loop v19.0 — ReAct (Reasoning + Acting) Pattern
+﻿"""
+LUMEN Agent Loop v19.0 â€” ReAct (Reasoning + Acting) Pattern
 Multi-step reasoning loop: think -> act -> observe -> repeat.
 """
 
@@ -84,6 +84,20 @@ class AgentLoop:
         """Execute the agent loop for a given task."""
         start = time.time()
         logger.info(f"AgentLoop starting: {task[:100]}")
+
+                # 0. Autoinjection: Retrieve relevant memories
+        try:
+            from .memory_engine import memory_engine
+            memories = await memory_engine.retrieve_memories(task, limit=3, strategy="hybrid")
+            if memories:
+                injection = "\n--- MEMORY AUTOINJECTION ---\n"
+                for m in memories:
+                    content_snippet = m.get('content', '')[:300]
+                    injection += f"- [Resonance: {m.get('resonance_score', 0):.2f}] {content_snippet}...\n"
+                task = injection + "\n" + task
+                logger.info("âś… Autoinjection complete.")
+        except Exception as e:
+            logger.warning(f"âš ď¸Ź Autoinjection failed: {e}")
 
         # Build system prompt with available tools
         tools_desc = json.dumps(tool_registry.list_tools(), indent=2)

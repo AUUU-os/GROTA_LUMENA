@@ -1,4 +1,4 @@
-"""
+﻿"""
 LUMEN MEMORY ENGINE
 Handles parsing, serialization, vectorization, and hybrid retrieval.
 Integrates SQL storage with ChromaDB vector search.
@@ -35,10 +35,10 @@ class MemoryEngine:
 
     async def load(self):
         """Explicitly initialize resources (warm-up)."""
-        logger.info("🐺 Memory Engine: Loading...")
+        logger.info("đźş Memory Engine: Loading...")
         # Force vector db initialization check (if applicable)
         # In future, this could preload embeddings or verify connection
-        logger.info("✅ Memory Engine: READY")
+        logger.info("âś… Memory Engine: READY")
 
     async def store_memory(
         self,
@@ -264,6 +264,22 @@ class MemoryEngine:
             except Exception:
                 continue
         return removed
+
+
+    async def auto_snap_loop(self, interval_seconds: int = 900):
+        \"\"\"Background loop for periodic memory snapshots (Auto Snap).\"\"\"
+        logger.info(f"đź“¸ Auto Snap: Loop started (Interval: {interval_seconds}s)")
+        while True:
+            try:
+                await asyncio.sleep(interval_seconds)
+                backup_path = await self.backup_to_file()
+                logger.info(f"đź“¸ Auto Snap: Backup created at {backup_path}")
+            except Exception as e:
+                logger.error(f"đź“¸ Auto Snap: Error during backup: {e}")
+
+    def start_auto_snap(self, interval_seconds: int = 900):
+        \"\"\"Launch the auto snap loop in the current event loop.\"\"\"
+        asyncio.create_task(self.auto_snap_loop(interval_seconds))
 
 # Singleton instance
 memory_engine = MemoryEngine()
