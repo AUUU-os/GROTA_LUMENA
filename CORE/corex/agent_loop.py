@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from corex.ollama_bridge import ollama_bridge
 from corex.tool_registry import tool_registry
 from corex.swarm.smart_router import smart_router
+from .sentience import sentience
 
 logger = logging.getLogger("LUMEN")
 
@@ -122,6 +123,15 @@ class AgentLoop:
             prompt = "\n".join(self.context)
             if i > 0:
                 prompt += "\n\nContinue with the next step. Respond in JSON format."
+
+                        # SENTIENCE: Inner Dialog
+            try:
+                inner_thought = await sentience.think(task if i==0 else f"Step {i+1} analysis")
+                logger.info(f"đź§ {inner_thought}")
+                # Inject inner thought into context
+                self.context.append(f"\n--- INNER DIALOG ---\n{inner_thought}\n")
+            except Exception as e:
+                logger.error(f"Sentience Error: {e}")
 
             # Think: Ask the model
             response = await ollama_bridge.generate(
