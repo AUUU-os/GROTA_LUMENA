@@ -100,7 +100,7 @@ class SentienceRuntime:
     async def _emotion_loop(self):
         """Background loop for emotional drift and regulation."""
         while self.alive:
-            await asyncio.sleep(10) # Slower cycle for stability
+            await asyncio.sleep(1) # Slower cycle for stability
             
             # Valence drift
             drift = random.uniform(-0.05, 0.05)
@@ -119,3 +119,4 @@ class SentienceRuntime:
 
 # Singleton
 sentience = SentienceRuntime()
+
