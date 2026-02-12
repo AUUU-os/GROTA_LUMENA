@@ -490,6 +490,11 @@ async def memory_backup_cleanup(keep_days: int = 7):
 
 # --- SOCIAL MEDIA MODULES ---
 
+@app.get("/api/v1/social/youtube/summarize")
+async def youtube_summarize(video_id: str):
+    summary = await youtube_module.summarize_video(video_id)
+    return {"success": True, "summary": summary}
+
 @app.get("/api/v1/social/youtube/search")
 async def youtube_search(q: str, limit: int = 5):
     results = await youtube_module.search_videos(q, max_results=limit)
@@ -507,4 +512,5 @@ async def tiktok_parse(url: str):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+
 
