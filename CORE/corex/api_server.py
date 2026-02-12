@@ -38,6 +38,8 @@ import csv
 import io
 from pathlib import Path
 from corex.memory_engine import memory_engine
+from corex.cloud_bridge import cloud_bridge
+from corex.git_manager import git_manager
 from modules.youtube import youtube_module
 from modules.tiktok import tiktok_module
 
@@ -510,7 +512,25 @@ async def tiktok_parse(url: str):
     data = await tiktok_module.parse_video(url)
     return {"success": True, "data": data}
 
+# --- SYNC & VERSIONING ---
+
+@app.post("/api/v1/sync/cloud")
+async def sync_to_cloud(path: str, provider: str = "gdrive"):
+    success = await cloud_bridge.sync_file(path, provider=provider)
+    return {"success": success, "provider": provider}
+
+@app.get("/api/v1/git/status")
+async def git_status():
+    status = git_manager.get_status()
+    return {"success": True, "status": status}
+
+@app.post("/api/v1/git/commit")
+async def git_commit(message: str):
+    result = git_manager.commit_changes(message)
+    return {"success": result is not None, "result": result}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+
 
 
