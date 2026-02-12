@@ -1,4 +1,4 @@
-"""
+﻿"""
 LUMEN CORE API SERVER v19.0.0
 Refactored for high-performance, asynchronous database integration and resonance scaling.
 Adheres to PEP 8 and robust engineering standards.
@@ -38,6 +38,8 @@ import csv
 import io
 from pathlib import Path
 from corex.memory_engine import memory_engine
+from modules.youtube import youtube_module
+from modules.tiktok import tiktok_module
 
 # --- INITIALIZATION ---
 logger = setup_lumen_logger(
@@ -103,7 +105,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         OmegaCommand(command=cmd)
                     )
                     if not is_safe:
-                        logger.warning(f"🚨 Security Block: {reason}")
+                        logger.warning(f"đźš¨ Security Block: {reason}")
                         return ORJSONResponse(
                             {"error": f"Security Violation: {reason}"}, status_code=403
                         )
@@ -486,5 +488,23 @@ async def memory_backup_cleanup(keep_days: int = 7):
     return {"success": True, "removed": removed}
 
 
+# --- SOCIAL MEDIA MODULES ---
+
+@app.get("/api/v1/social/youtube/search")
+async def youtube_search(q: str, limit: int = 5):
+    results = await youtube_module.search_videos(q, max_results=limit)
+    return {"success": True, "results": results}
+
+@app.get("/api/v1/social/tiktok/trends")
+async def tiktok_trends(region: str = "PL"):
+    trends = await tiktok_module.get_trends(region=region)
+    return {"success": True, "trends": trends}
+
+@app.get("/api/v1/social/tiktok/parse")
+async def tiktok_parse(url: str):
+    data = await tiktok_module.parse_video(url)
+    return {"success": True, "data": data}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+
