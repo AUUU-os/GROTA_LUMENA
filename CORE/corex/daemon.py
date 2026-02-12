@@ -16,6 +16,7 @@ from .audit import AuditLogger
 from .vault import SecretVault
 from .error_formatter import ErrorFormatter
 from .metrics import metrics_engine
+from .evolution_hub import evolution_hub
 from modules.sentinel import SentinelModule
 from modules.architect import ArchitectModule
 from modules.knowledge import KnowledgeModule
@@ -118,6 +119,8 @@ class CoreXDaemon:
 
         # Register core modules
         await self._init_modules()
+        # Start Evolution Pipeline
+        asyncio.create_task(evolution_hub.monitor_and_evolve())
 
         logger.info(f"  Mode: {self.mode.value}")
         logger.info(f"  Data dir: {self.data_dir}")
@@ -262,7 +265,9 @@ class CoreXDaemon:
                 metadata=context,
             )
 
-            # đź§¬ OMEGA FEEDBACK LOOP
+                        # đź§¬ OMEGA FEEDBACK LOOP
+            asyncio.create_task(evolution_hub.track_resonance(response.get('success', False), latency_ms))
+            asyncio.create_task(evolution_hub.recursive_optimize())
             asyncio.create_task(self._adaptive_learning_feedback(command, response))
 
             return response
