@@ -31,7 +31,7 @@ class VectorMemory:
             model_name="all-MiniLM-L6-v2"
         )
         self._collection = self._client.get_or_create_collection(
-            name="lumen_knowledge",
+            name="code_base",
             embedding_function=self._embed_fn,
             metadata={"hnsw:space": "cosine"},
         )
