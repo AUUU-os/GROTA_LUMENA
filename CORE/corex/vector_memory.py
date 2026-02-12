@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import os
 from typing import Dict, Any
 
@@ -12,14 +12,14 @@ class VectorMemory:
     Lazy-initialized: heavy dependencies (torch, sentence-transformers) load on first use.
     """
 
-    def __init__(self, db_path: str = "data/vector_db"):
+    def __init__(self, db_path: str = "E:/SHAD/shad_builder/chroma_db_vibe"):
         self.db_path = db_path
         self._client = None
         self._embed_fn = None
         self._collection = None
 
     def _ensure_initialized(self):
-        """Lazy init — loads chromadb + sentence-transformers on first use."""
+        """Lazy init â€” loads chromadb + sentence-transformers on first use."""
         if self._collection is not None:
             return
         import chromadb

@@ -1,4 +1,4 @@
-import os
+﻿import os
 from typing import List, Union
 from pydantic import AnyHttpUrl, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///lumen_core.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///E:/SHAD/GROTA_LUMENA/DATABASE/lumen_core.db"
 
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
