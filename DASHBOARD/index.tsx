@@ -79,7 +79,7 @@ import {
 
 // --- Types ---
 
-type ViewMode = "chat" | "image" | "video" | "live" | "tasks" | "repo" | "models" | "grota" | "evolution" | "docs_chat" | "memory" | "analytics" | "tools";
+type ViewMode = "chat" | "image" | "video" | "live" | "tasks" | "repo" | "models" | "grota" | "evolution" | "docs_chat" | "memory" | "analytics" | "tools" | "social";
 
 interface ChatMessage { 
   id: string;
@@ -2685,6 +2685,87 @@ const DocChatView = () => {
     </div>
   );
 };
+const SocialHub = ({ addLog }: { addLog: any }) => {
+  const [ytQuery, setYtQuery] = useState("");
+  const [ytResults, setYtResults] = useState<any[]>([]);
+  const [tiktokTrends, setTiktokTrends] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const searchYT = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(\/api/v1/social/youtube/search?q=\\);
+      const data = await res.json();
+      setYtResults(data.results || []);
+      addLog({ message: "YouTube search completed", type: "success", source: "SocialHub" });
+    } catch (e) {
+      addLog({ message: "YouTube search failed", type: "error", source: "SocialHub" });
+    }
+    setLoading(false);
+  };
+
+  const fetchTikTok = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/social/tiktok/trends');
+      const data = await res.json();
+      setTiktokTrends(data.trends || []);
+      addLog({ message: "TikTok trends updated", type: "success", source: "SocialHub" });
+    } catch (e) {
+      addLog({ message: "TikTok trends failed", type: "error", source: "SocialHub" });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchTikTok(); }, []);
+
+  return (
+    <div className="h-full flex flex-col gap-6 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+        <div className="glass rounded-[32px] p-6 border border-white/5 flex flex-col">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500"><Film className="w-5 h-5" /></div>
+            <div><h3 className="font-bold text-white">YouTube Forge</h3><p className="text-[10px] text-zinc-500 uppercase tracking-widest">Search & Analyze</p></div>
+          </div>
+          <div className="flex gap-2 mb-6">
+            <input value={ytQuery} onChange={(e) => setYtQuery(e.target.value)} placeholder="Search videos..." className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-red-500/50 transition-colors" />
+            <button onClick={searchYT} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl transition-all shadow-lg shadow-red-500/20"><Search className="w-4 h-4" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+            {ytResults.map((v, i) => (
+              <div key={i} className="glass-light p-3 rounded-2xl border border-white/5 flex items-center gap-4 group hover:bg-white/5 transition-all">
+                <div className="w-16 h-10 bg-zinc-800 rounded-lg flex items-center justify-center"><Play className="w-4 h-4 text-zinc-600 group-hover:text-white" /></div>
+                <div className="flex-1 min-w-0">
+                   <p className="text-xs font-bold text-white truncate">{v.title}</p>
+                   <p className="text-[10px] text-zinc-500">{v.url}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="glass rounded-[32px] p-6 border border-white/5 flex flex-col">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 flex items-center justify-center text-cyan-500"><Hash className="w-5 h-5" /></div>
+            <div><h3 className="font-bold text-white">TikTok Trends</h3><p className="text-[10px] text-zinc-500 uppercase tracking-widest">Global Pulse</p></div>
+            <button onClick={fetchTikTok} className="ml-auto p-2 hover:bg-white/5 rounded-full text-zinc-500"><RefreshCw className={w-4 h-4 \} /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+             {tiktokTrends.map((t, i) => (
+               <div key={i} className="glass-light p-4 rounded-2xl border border-white/5 flex items-center justify-between group hover:border-cyan-500/30 transition-all">
+                  <div className="flex items-center gap-3">
+                     <span className="text-zinc-500 font-bold text-xs">#\</span>
+                     <span className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors">#{t.hashtag}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-zinc-500 bg-white/5 px-2 py-1 rounded-lg">{t.views} views</span>
+               </div>
+             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   const [view, setView] = useState<ViewMode>("chat");
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -2726,6 +2807,7 @@ const App = () => {
           <NavItem m="models" icon={Database} label="Model Forge" />
           <NavItem m="memory" icon={Brain} label="Memory Vault" />
           <NavItem m="tasks" icon={CheckSquare} label="Task Manager" />
+          <NavItem m="social" icon={Globe} label="Social Hub" />
           <NavItem m="grota" icon={Mountain} label="Grota Dashboard" />
           <NavItem m="evolution" | "docs_chat" icon={Brain} label="Evolution Tree" />
         </nav>
@@ -2750,6 +2832,7 @@ const App = () => {
           {view === "video" && <div className="h-full glass rounded-[32px] p-8 flex flex-col items-center justify-center border border-white/5"><Video className="w-16 h-16 mb-4 opacity-20" /><h3 className="text-xl font-bold text-zinc-400">Wolf Vision (Veo)</h3></div>}
           {view === "live" && <div className="h-full glass rounded-[32px] p-8 flex flex-col items-center justify-center border border-white/5"><Mic className="w-16 h-16 mb-4 opacity-20" /><h3 className="text-xl font-bold text-zinc-400">Native Audio</h3></div>}
           {view === "grota" && <GrotaView addLog={addLog} />}
+          {view === "social" && <SocialHub addLog={addLog} />}
 
           {view === "analytics" && <AnalyticsView />}
           {view === "tools" && <ToolsView />}
@@ -2767,5 +2850,7 @@ const init = () => {
   if (container) createRoot(container).render(<App />);
 };
 init();
+
+
 
 
