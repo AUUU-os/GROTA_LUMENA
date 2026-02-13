@@ -1,0 +1,20 @@
+﻿{
+  "title": "OMEGA OPERATIONS CENTER",
+  "panels": [
+    {
+      "title": "System Resonance (Hz)",
+      "type": "gauge",
+      "targets": [ { "expr": "lumen_resonance_score" } ]
+    },
+    {
+      "title": "Error Rate (SLO < 1%)",
+      "type": "graph",
+      "targets": [ { "expr": "rate(lumen_commands_total{success='False'}[5m])" } ]
+    },
+    {
+      "title": "Pod Autoscaling (CPU)",
+      "type": "graph",
+      "targets": [ { "expr": "container_cpu_usage_seconds_total" } ]
+    }
+  ]
+}

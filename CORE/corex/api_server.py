@@ -39,6 +39,7 @@ import io
 from pathlib import Path
 from corex.memory_engine import memory_engine
 from corex.cloud_bridge import cloud_bridge
+from corex.socket_manager import socket_manager
 from corex.git_manager import git_manager
 from modules.youtube import youtube_module
 from modules.tiktok import tiktok_module
@@ -135,6 +136,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(swarm_router, prefix="/api/v1/swarm")
+app.mount("/ws", socket_manager.app)
 
 
 # --- DATA MODELS ---
@@ -531,6 +533,7 @@ async def git_commit(message: str):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+
 
 
 

@@ -2786,14 +2786,25 @@ const App = () => {
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 selection:bg-indigo-500/30">
+    <style>
+  @keyframes resonance-wave {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 0.4; }
+  }
+  .resonance-active {
+    animation: resonance-wave 2s infinite ease-in-out;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+  }
+</style>
+<div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 selection:bg-indigo-500/30">
       <div className="fixed inset-0 z-0">
           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[120px] animate-pulse-slow" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-600/5 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
       </div>
       <aside className="w-64 glass flex flex-col p-4 z-10 m-4 rounded-[24px] shadow-2xl relative border border-white/5">
         <div className="flex items-center gap-3 mb-8 px-2 mt-2">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.1)]"><Zap className="w-5 h-5 text-black fill-black" /></div>
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.1)] resonance-active"><Zap className="w-5 h-5 text-black fill-black" /></div>
           <div><h1 className="font-bold text-lg tracking-tight leading-none text-white text-sm">STUDIO</h1><span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Pro Edition</span></div>
         </div>
         <nav className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-2">
@@ -2850,6 +2861,7 @@ const init = () => {
   if (container) createRoot(container).render(<App />);
 };
 init();
+
 
 
 

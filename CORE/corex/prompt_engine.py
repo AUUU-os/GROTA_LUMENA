@@ -1,4 +1,4 @@
-"""
+﻿"""
 LUMEN PROMPT ENGINE v2.0
 Implements the LUMEN FRAME Structure.
 """
@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 import json
 from datetime import datetime
+from .prompt_engineer import prompt_engineer
 
 class AIModel(Enum):
     WILK_LOCAL = "llama3.2"       
@@ -59,6 +60,8 @@ class LumenPromptBuilder:
         return self
 
     def build(self) -> str:
+        # Auto-refine mission if engineering is active
+        self.directive = prompt_engineer.refine_query(self.directive)
         constraints_str = "\n".join([f"- {c}" for c in self.fence])
         
         return f"""
@@ -91,3 +94,4 @@ class LumenPromptBuilder:
 
 # Singleton for quick access
 prompt_builder = LumenPromptBuilder()
+

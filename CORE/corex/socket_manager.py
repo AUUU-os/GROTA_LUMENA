@@ -1,42 +1,28 @@
-import asyncio
+﻿import socketio
 import logging
-from typing import List
-from fastapi import WebSocket
+import asyncio
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("SOCKET-MANAGER")
 
 class SocketManager:
-    """
-    Handles real-time bidirectional communication with the Command Center.
-    Replaces polling with event-driven updates.
-    """
+    """Manages high-speed WebRTC/WebSocket streams for Voice and Live Data."""
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+        self.app = socketio.ASGIApp(self.sio)
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-        logger.info(f"🔗 New Uplink Established. Total connections: {len(self.active_connections)}")
+    async def broadcast_resonance(self, data: dict):
+        """Sends real-time system metrics to the Dashboard."""
+        await self.sio.emit('pulse', data)
 
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-            logger.info(f"💔 Uplink Severed. Remaining: {len(self.active_connections)}")
+    @socketio.on('connect')
+    def connect(sid, environ):
+        logger.info(f"âś¨ Heartbeat Link Established: {sid}")
 
-    async def broadcast(self, message: dict):
-        """Send message to all connected dashboards"""
-        if not self.active_connections:
-            return
-            
-        disconnected = []
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                disconnected.append(connection)
-        
-        for conn in disconnected:
-            self.disconnect(conn)
+    @socketio.on('voice_stream')
+    async def handle_voice(self, sid, data):
+        """Processes incoming Opus/WebRTC chunks."""
+        # Here we will hook into the OpenAI Realtime API bridge
+        logger.info(f"đźŚş Voice Stream Received from {sid}")
+        # Processing logic...
 
-# Singleton
 socket_manager = SocketManager()
