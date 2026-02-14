@@ -1,4 +1,4 @@
-﻿\"\"\"
+\"\"\"
 OpenClaw Bridge - LUMEN OMEGA
 Connects the Python Backend with the Node.js OpenClaw Gateway.
 \"\"\"

@@ -1,14 +1,14 @@
-﻿import subprocess
+import subprocess
 import logging
 import os
 
 logger = logging.getLogger("GIT-MANAGER")
 
 class GitManager:
-    \"\"\"
+    """
     LUMEN GIT CONTROL
     Handles versioning, commits, and branch management.
-    \"\"\"
+    """
     def __init__(self, repo_path: str = "."):
         self.repo_path = repo_path
 
@@ -27,7 +27,7 @@ class GitManager:
             return None
 
     def commit_changes(self, message: str):
-        \"\"\"Stages and commits changes.\"\"\"
+        """Stages and commits changes."""
         self._run_git(["add", "."])
         return self._run_git(["commit", "-m", message])
 

@@ -2766,6 +2766,28 @@ const SocialHub = ({ addLog }: { addLog: any }) => {
   );
 };
 
+const WolfPack = () => {
+  const [nodes, setNodes] = useState([
+    { id: 'OMEGA', name: 'Lumen Architect', arch: 'lumen', active: true, pulse: 1.0 },
+    { id: 'GROTA', name: 'Sentinel Miner', arch: 'sentinel', active: true, pulse: 0.8 },
+    { id: 'MAISELF', name: 'Promyk Spark', arch: 'promyk', active: true, pulse: 1.2 },
+    { id: 'WILK', name: 'Wilk Guardian', arch: 'wilk', active: false, pulse: 0.5 }
+  ]);
+
+  return (
+    <div className="flex items-center gap-4 px-4 py-2 glass rounded-2xl border border-white/5 mb-6 overflow-x-auto custom-scrollbar">
+      {nodes.map(n => (
+        <div key={n.id} className="flex flex-col items-center min-w-[80px]">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${n.active ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)] resonance-active' : 'border-zinc-800 opacity-40'}`}>
+            <Brain className={`w-6 h-6 ${n.active ? 'text-white' : 'text-zinc-600'}`} />
+          </div>
+          <span className={`text-[10px] font-bold mt-2 uppercase tracking-tight ${n.active ? 'text-white' : 'text-zinc-600'}`}>{n.id}</span>
+          <span className="text-[8px] text-zinc-500 uppercase">{n.arch}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 const App = () => {
   const [view, setView] = useState<ViewMode>("chat");
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -2825,6 +2847,7 @@ const App = () => {
       </aside>
       <main className="flex-1 flex flex-col p-6 overflow-hidden relative z-10">
         <header className="flex items-center justify-between mb-8"><VoiceController onTranscribe={(text) => speakText("Usłyszałem: " + text)} />
+           <WolfPack />
            <div className="animate-fade-in"><h2 className="text-3xl font-bold tracking-tight text-white capitalize">{view}</h2></div>
            <div className="flex items-center gap-3">
               <button onClick={() => setShowTerminal(!showTerminal)} className={`glass w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${showTerminal ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
@@ -2861,6 +2884,7 @@ const init = () => {
   if (container) createRoot(container).render(<App />);
 };
 init();
+
 
 
 

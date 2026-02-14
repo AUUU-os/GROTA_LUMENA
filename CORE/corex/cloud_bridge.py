@@ -1,4 +1,4 @@
-﻿import os
+import os
 import logging
 import asyncio
 from pathlib import Path
@@ -7,10 +7,10 @@ from typing import Optional, Dict, Any
 logger = logging.getLogger("CLOUD-BRIDGE")
 
 class CloudBridge:
-    \"\"\"
+    """
     LUMEN UNIVERSAL CLOUD BRIDGE
     Integrates Google Drive, Dropbox, and RESTful sync protocols.
-    \"\"\"
+    """
     def __init__(self):
         self.providers = {
             "gdrive": {"enabled": False, "creds": "KEYS/gdrive_auth.json"},
@@ -26,7 +26,7 @@ class CloudBridge:
             self.providers["dropbox"]["enabled"] = True
 
     async def sync_file(self, local_path: str, provider: str = "gdrive"):
-        \"\"\"Main entry point for file synchronization.\"\"\"
+        """Main entry point for file synchronization."""
         if not self.providers.get(provider, {}).get("enabled"):
             logger.warning(f"Provider {provider} not active. Falling back to local queue.")
             return False
@@ -51,7 +51,7 @@ class CloudBridge:
         return True
 
     async def run_backup_cycle(self, target_dir: str):
-        \"\"\"Runs a full backup cycle for a directory.\"\"\"
+        """Runs a full backup cycle for a directory."""
         logger.info(f"đź“¦ Starting Backup Cycle for {target_dir}")
         for root, dirs, files in os.walk(target_dir):
             for file in files:

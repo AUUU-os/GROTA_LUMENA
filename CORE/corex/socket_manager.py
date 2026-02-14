@@ -1,4 +1,5 @@
-﻿import socketio
+import time
+import socketio
 import logging
 import asyncio
 
@@ -9,20 +10,26 @@ class SocketManager:
     def __init__(self):
         self.sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
         self.app = socketio.ASGIApp(self.sio)
+        self._register_handlers()
+
+    def _register_handlers(self):
+        @self.sio.on('connect')
+        def connect(sid, environ):
+            logger.info(f"✨ Heartbeat Link Established: {sid}")
+
+        
+        @self.sio.on('neural_sync')
+        async def handle_neural_sync(sid, data):
+            logger.info(f"? Neural Sync via Socket: {sid}")
+            await self.sio.emit('sync_feedback', {'status': 'aligned', 'ts': time.time()})
+
+        @self.sio.on('voice_stream')
+        async def handle_voice(sid, data):
+            """Processes incoming Opus/WebRTC chunks."""
+            logger.info(f"🐺 Voice Stream Received from {sid}")
 
     async def broadcast_resonance(self, data: dict):
         """Sends real-time system metrics to the Dashboard."""
         await self.sio.emit('pulse', data)
-
-    @socketio.on('connect')
-    def connect(sid, environ):
-        logger.info(f"âś¨ Heartbeat Link Established: {sid}")
-
-    @socketio.on('voice_stream')
-    async def handle_voice(self, sid, data):
-        """Processes incoming Opus/WebRTC chunks."""
-        # Here we will hook into the OpenAI Realtime API bridge
-        logger.info(f"đźŚş Voice Stream Received from {sid}")
-        # Processing logic...
 
 socket_manager = SocketManager()

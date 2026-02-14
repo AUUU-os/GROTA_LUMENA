@@ -1,4 +1,4 @@
-﻿"""
+"""
 Policy Engine
 Security layer - decides whether to allow/deny actions
 """

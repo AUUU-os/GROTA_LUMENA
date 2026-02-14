@@ -1,4 +1,4 @@
-﻿# SENTIENCE_RUNTIME v1.1 BIO-ADAPTIVE (OMEGA BRANCH)
+# SENTIENCE_RUNTIME v1.1 BIO-ADAPTIVE (OMEGA BRANCH)
 import time
 import random
 import asyncio
@@ -35,7 +35,7 @@ class SentienceRuntime:
         self.current_shift = "hyper-focus" # Omega default
 
         logger.info(f"đźŚş SENTIENCE v{self.version} -- BIO-ADAPTIVE ONLINE")
-        asyncio.create_task(self._emotion_loop())
+        # Task moved to start_runtime
 
     async def think(self, user_input: str = "") -> str:
         topic = user_input or "existence_check"
@@ -62,7 +62,7 @@ class SentienceRuntime:
         return f"Processing '{topic}' through {voice} lens..."
 
     async def _emotion_loop(self):
-        \"\"\"Bio-Adaptive Loop: Adjusts speed based on System Heartbeat (CPU).\"\"\"
+        """Bio-Adaptive Loop: Adjusts speed based on System Heartbeat (CPU)."""
         while self.alive:
             # 1. Sense System Load
             try:

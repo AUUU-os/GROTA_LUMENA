@@ -1,4 +1,4 @@
-﻿"""
+"""
 CORE_X_AGENT Daemon
 Main orchestration process
 """

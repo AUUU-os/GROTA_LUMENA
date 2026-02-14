@@ -14,7 +14,7 @@ from .smart_router import smart_router, ROUTING_TABLE
 # Import auth system from dedicated module to avoid circular import
 from corex.auth import verify_token
 
-router = APIRouter(prefix="/api/v1/swarm", tags=["Swarm Nexus"])
+router = APIRouter(tags=["Swarm Nexus"])
 
 
 @router.get("/agents", response_model=List[str])

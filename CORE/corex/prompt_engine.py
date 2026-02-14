@@ -1,4 +1,4 @@
-﻿"""
+"""
 LUMEN PROMPT ENGINE v2.0
 Implements the LUMEN FRAME Structure.
 """

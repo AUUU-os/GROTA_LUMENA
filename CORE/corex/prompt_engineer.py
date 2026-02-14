@@ -1,4 +1,4 @@
-﻿"""
+"""
 LUMEN PROMPT ENGINEER
 Role: Prompt Engineer. Objective: Optimize LLM interactions.
 Implements structured prompts and measurable outcomes.

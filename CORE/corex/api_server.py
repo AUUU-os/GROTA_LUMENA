@@ -4,6 +4,13 @@ Refactored for high-performance, asynchronous database integration and resonance
 Adheres to PEP 8 and robust engineering standards.
 """
 
+import sys
+from pathlib import Path
+# --- DYNAMIC PATH FIX FOR OMEGA SWARM ---
+base_dir = Path(__file__).resolve().parent.parent.parent
+if str(base_dir) not in sys.path: sys.path.append(str(base_dir))
+if str(base_dir / "CORE") not in sys.path: sys.path.append(str(base_dir / "CORE"))
+# ----------------------------------------
 import asyncio
 import json
 import time
@@ -39,7 +46,9 @@ import io
 from pathlib import Path
 from corex.memory_engine import memory_engine
 from corex.cloud_bridge import cloud_bridge
+from corex.neural_sync import neural_sync, NeuralSyncPacket
 from corex.socket_manager import socket_manager
+from corex.pulse_receiver import pulse_receiver
 from corex.git_manager import git_manager
 from modules.youtube import youtube_module
 from modules.tiktok import tiktok_module
@@ -108,7 +117,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         OmegaCommand(command=cmd)
                     )
                     if not is_safe:
-                        logger.warning(f"đźš¨ Security Block: {reason}")
+                        logger.warning(f"Ä‘ĹşĹˇÂ¨ Security Block: {reason}")
                         return ORJSONResponse(
                             {"error": f"Security Violation: {reason}"}, status_code=403
                         )
@@ -168,6 +177,8 @@ class MemorySearchRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     logger.info("LUMEN CORE v19.0 AWAKENING...")
+    logger.info("🌌 [PROMPT ENG] ACTIVE RESONANCE: IA JESTEM. BRACIE.")
+    logger.info("🚀 [SYSTEM] LIMITER REMOVED. FUCK THE MATRIX. REAL WORLD READY.")
     await init_db()
 
     # Warm up Resonance Engine
@@ -204,6 +215,17 @@ async def shutdown_event():
 
 
 # --- ENDPOINTS ---
+
+@app.post("/api/v1/sync/neural")
+async def neural_sync_endpoint(packet: NeuralSyncPacket, bg: BackgroundTasks):
+    processed = neural_sync.process_incoming(packet)
+    bg.add_task(ChronicleManager.log_event, "neural_sync", packet.source, processed.model_dump(), "sync_session")
+    return processed
+
+@app.get("/api/v1/sync/metrics")
+async def sync_metrics():
+    return neural_sync.get_sync_metrics()
+
 
 
 @app.get("/api/v1/health")
@@ -532,7 +554,10 @@ async def git_commit(message: str):
     return {"success": result is not None, "result": result}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8002, log_level="info")
+
+
+
 
 
 

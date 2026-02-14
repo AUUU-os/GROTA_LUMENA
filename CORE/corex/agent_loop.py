@@ -1,4 +1,4 @@
-﻿"""
+"""
 LUMEN Agent Loop v19.0 â€” ReAct (Reasoning + Acting) Pattern
 Multi-step reasoning loop: think -> act -> observe -> repeat.
 """

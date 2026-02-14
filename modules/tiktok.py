@@ -5,17 +5,17 @@ from typing import Dict, Any, List
 logger = logging.getLogger("TIKTOK-MODULE")
 
 class TikTokModule:
-    \"\"\"
+    """
     TikTok Integration Module for LUMEN.
     Handles trend monitoring and video data parsing.
-    \"\"\"
+    """
     def __init__(self):
         self.enabled = True
 
     async def get_trends(self, region: str = "PL") -> List[Dict[str, Any]]:
-        \"\"\"
+        """
         Fetches trending hashtags or videos.
-        \"\"\"
+        """
         logger.info(f"đź“± TikTok: Fetching trends for region: {region}...")
         return [
             {"hashtag": "lumen_omega", "views": "1.2B"},

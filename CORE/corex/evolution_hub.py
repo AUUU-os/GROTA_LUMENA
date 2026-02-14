@@ -1,4 +1,4 @@
-﻿"""
+"""
 LUMEN EVOLUTION HUB
 Manages system scaling and distributed node registration.
 Preparing for Phase 11: Swarm Distribution.
