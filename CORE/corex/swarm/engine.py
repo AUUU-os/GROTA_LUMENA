@@ -1,3 +1,4 @@
+from langsmith import traceable
 import asyncio
 import json
 import time
@@ -71,6 +72,7 @@ class SwarmEngine:
             pass
         return None
 
+    @traceable(name="Swarm Task Execution", project_name="LUMENA_OMEGA_v19")
     async def execute_task(self, task: SwarmTask) -> AgentResponse:
         """Dispatch task with smart routing and retry logic."""
         self._queue_size += 1
